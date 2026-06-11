@@ -324,9 +324,19 @@
       </div>
     </div>
 
-    <!-- Kakari indicator -->
-    <div id="hudKakari" style="color:#ff4444; font-size:18px; font-weight:900;
-      text-shadow:0 0 8px #ff0000; display:none; margin-top:4px;">⚡ 掛かり！</div>
+    <!-- Tactical badges row (fixed height so it never shifts layout) -->
+    <div id="hudBadges" style="display:flex; gap:6px; align-items:center;
+      height:22px; margin-top:5px; pointer-events:none;">
+      <span id="badgeSlip" style="display:none; font-size:12px; font-weight:700;
+        padding:2px 8px; border-radius:11px; color:#fff;
+        background:rgba(40,180,80,0.85); text-shadow:0 1px 2px #000;">風よけ</span>
+      <span id="badgeWall" style="display:none; font-size:12px; font-weight:700;
+        padding:2px 8px; border-radius:11px; color:#fff;
+        background:rgba(210,50,50,0.9); text-shadow:0 1px 2px #000;">前が壁</span>
+      <span id="badgeKakari" style="display:none; font-size:12px; font-weight:900;
+        padding:2px 8px; border-radius:11px; color:#fff;
+        background:rgba(240,130,20,0.92); text-shadow:0 1px 2px #000;">⚡ 掛かり！</span>
+    </div>
   </div>
 
   <!-- ==== CONTROLS ==== -->
@@ -343,6 +353,15 @@
       background:rgba(255,255,255,0.22); border:2px solid rgba(255,255,255,0.5);
       display:flex; align-items:center; justify-content:center;
       font-size:30px; pointer-events:auto; touch-action:none; user-select:none;">▲</div>
+    <div id="btnWhip" style="
+      position:absolute; bottom:166px; right:20px;
+      width:76px; height:56px; border-radius:14px;
+      background:rgba(220,60,60,0.32); border:2px solid rgba(255,120,120,0.7);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      pointer-events:auto; touch-action:none; user-select:none; transition:opacity 0.15s;">
+      <span style="font-size:18px; font-weight:900; color:#fff; line-height:1;">ムチ</span>
+      <span id="btnWhipSub" style="font-size:10px; color:#ffd0d0; line-height:1.2; margin-top:2px; display:none;">効果減</span>
+    </div>
   </div>
 
   <!-- ==== UI-SCREENS ==== -->
@@ -371,6 +390,7 @@
         <li><strong>右下ボタン▲（仕掛ける）</strong>：スピードを上げます。スタミナ消費が増えます。</li>
         <li><strong>左下ボタン▼（抑える）</strong>：ペースを落とし、スタミナを温存します。掛かり時に長押しで解消できます。</li>
         <li><strong>左右スワイプ・端タップ</strong>：進路を変更します。ブロックされた際に使いましょう。</li>
+        <li><strong>右の「ムチ」ボタン</strong>：数秒間ぐっと加速します。スタミナを大きく消費し、短時間に連打すると効果が落ちます（効果減）。直線の勝負所で使いましょう。</li>
       </ul>
       <p><strong>脚質：</strong></p>
       <ul>
@@ -523,16 +543,27 @@
     PULL_FACTOR: 0.025,     // 気性難の「行きたがり」：(50-気性)×この値だけ序盤に勝手に加速
     PULL_MAX: 0.8,
 
+    // 鞭（ムチ）
+    WHIP_BOOST: 1.0,        // 発動直後の上乗せ m/s（瞬発力と連打減衰で増減）
+    WHIP_DURATION: 2.5,     // 効果が線形に切れるまでの秒数
+    WHIP_COST: 55,          // 1発のスタミナ消費
+    WHIP_COOLDOWN: 1.0,     // 連打の最小間隔 s
+    WHIP_DECAY_MUL: 0.55,   // 連打で効果が掛かる倍率（×0.55）
+    WHIP_RECOVER_S: 8,      // 効果が満タンへ戻るおおよその秒数
+    AI_WHIP_REMAIN: 350,    // AIが鞭を入れ始める残り距離 m
+    AI_WHIP_MAX: 3,         // AI1頭あたりの最大使用回数
+    AI_WHIP_RATE: 0.9,      // 条件成立中の毎秒発生確率
+
     // Going multipliers
     GOING_MUL: { '良': 1.0, '稍重': 0.99, '重': 0.978, '不良': 0.965 },
 
     // Score
     RANK_POINTS: [1000, 600, 400, 250, 150, 100, 80, 60, 40, 25, 15, 10],
     BASE_TIMES: {
-      1200: { '良': 70.0,  '稍重': 70.7,  '重': 71.8,  '不良': 72.8  },
+      1200: { '良': 70.5,  '稍重': 71.2,  '重': 72.3,  '不良': 73.3  },
       1600: { '良': 92.5,  '稍重': 93.4,  '重': 94.8,  '不良': 96.2  },
-      2000: { '良': 117.5, '稍重': 118.7, '重': 120.4, '不良': 122.2 },
-      2400: { '良': 142.5, '稍重': 143.9, '重': 146.1, '不良': 148.2 },
+      2000: { '良': 116.5, '稍重': 117.7, '重': 119.4, '不良': 121.2 },
+      2400: { '良': 142.0, '稍重': 143.4, '重': 145.6, '不良': 147.7 },
     },
     TIME_BONUS_PER_TENTH: 5,
     TIME_BONUS_MAX: 300,
@@ -780,6 +811,14 @@
         kakariTimer: 0,
         kakariAccum: 0,
         holdAccum: 0,        // for kakari release
+        // 鞭
+        whipBoost: 0,        // 現在発動中の鞭1発分の上乗せ基準値
+        whipTimer: 0,        // 残り効果時間 s
+        whipEff: 1.0,        // 連打減衰の係数（1.0で満タン）
+        whipCdTimer: 0,      // 次に打てるまでのクールダウン s
+        whipCount: 0,        // この馬の通算使用回数
+        inSlip: false,       // 戦術表示用：スリップストリーム（風よけ）適用中
+        isWalled: false,     // 戦術表示用：前が壁で速度制限中
         finished: false,
         finishTime: 0,
         legPhase: rng() * Math.PI * 2,
@@ -805,6 +844,15 @@
       fieldCruiseAvg: cruiseSum / field.length,
       paceRatio: 0,
       paceRecorded: false,
+      // プレイヤー馬のレース統計（フェーズ4の講評用）。安価に維持する
+      playerStats: {
+        kakariTime: 0,         // 掛かっていた累積秒数
+        blockedFinalTime: 0,   // 残り600m以内で壁だった累積秒数
+        whipCount: 0,          // 鞭の使用回数（完走時に確定）
+        spurtRemain: null,     // スパート開始（巡航超過）時の残り距離 m
+        staminaAtFinish: null, // 完走時の残スタミナ割合
+        rankAtHalf: null,      // 半分通過時点の順位（1始まり）
+      },
       playerIndex,
       playerStartDelay: null, // ゲート演出のタップ精度で外から設定（未設定なら標準値）
       started: false,
@@ -908,18 +956,21 @@
 
       // ── Slipstream ──
       let drainMul = 1.0;
+      h.inSlip = false;
       for (let j = 0; j < horses.length; j++) {
         if (j === i || horses[j].finished) continue;
         const ahead = horses[j].progress - h.progress;
         const laneDiff2 = Math.abs(horses[j].laneF - h.laneF);
         if (ahead > CONFIG.SLIP_Z_MIN && ahead < CONFIG.SLIP_Z_MAX && laneDiff2 < CONFIG.SLIP_LANE_MAX) {
           drainMul = CONFIG.SLIP_MUL;
+          h.inSlip = true;
           break;
         }
       }
 
       // ── Wall blocking ──
       let speedCap = Infinity;
+      h.isWalled = false;
       if (isBlocked(horses, i, h.progress, h.laneF)) {
         // Cap at the blocking horse's speed
         for (let j = 0; j < horses.length; j++) {
@@ -929,6 +980,7 @@
             speedCap = Math.min(speedCap, horses[j].speed);
           }
         }
+        if (speedCap < Infinity) h.isWalled = true;
       }
 
       // ── Target speed ──
@@ -1027,6 +1079,36 @@
         }
       }
 
+      // ── 鞭（ムチ）── 目標速度確定後・バテ計算前。掛かり中は無効
+      // 毎ステップでクールダウンを減らし、効果係数を回復させる
+      if (h.whipCdTimer > 0) h.whipCdTimer -= dt;
+      h.whipEff = Math.min(1, h.whipEff + dt * (1 - CONFIG.WHIP_DECAY_MUL) / CONFIG.WHIP_RECOVER_S);
+      if (h.whipTimer > 0) h.whipTimer -= dt;
+
+      // 発動意思：プレイヤーはエッジトリガ、AIは終盤の確率判断
+      let wantWhip = false;
+      if (isPlayer) {
+        wantWhip = !!(input && input.whip);
+      } else {
+        const staminaFracAI = h.stamina / CONFIG.STAMINA_MAX;
+        if (inSpurt && remaining < CONFIG.AI_WHIP_REMAIN && staminaFracAI > 0.05 &&
+            h.whipCount < CONFIG.AI_WHIP_MAX && rng() < CONFIG.AI_WHIP_RATE * dt) {
+          wantWhip = true;
+        }
+      }
+      if (wantWhip && h.whipCdTimer <= 0 && h.stamina > 0 && !h.isKakari) {
+        const burstScale = 0.85 + def.burst * 0.003;          // 瞬発力で鞭の効きが変わる
+        h.whipBoost = CONFIG.WHIP_BOOST * h.whipEff * burstScale;
+        h.whipTimer = CONFIG.WHIP_DURATION;
+        h.whipEff *= CONFIG.WHIP_DECAY_MUL;                    // 連打減衰
+        h.whipCdTimer = CONFIG.WHIP_COOLDOWN;
+        h.stamina = Math.max(0, h.stamina - CONFIG.WHIP_COST);
+        h.whipCount++;
+      }
+      // 現在の鞭ブースト（残り時間に応じて線形減衰）
+      const whipNow = h.whipTimer > 0 ? h.whipBoost * (h.whipTimer / CONFIG.WHIP_DURATION) : 0;
+      targetSpeed += whipNow;
+
       // Apply wall cap
       targetSpeed = Math.min(targetSpeed, speedCap);
 
@@ -1035,6 +1117,7 @@
       const staminaFrac = h.stamina / CONFIG.STAMINA_MAX;
       let effectiveMax = h.maxSpeed +
         Math.min(CONFIG.SPURT_FRESH_MAX, staminaFrac * CONFIG.SPURT_FRESH_K);
+      effectiveMax += whipNow; // 鞭は最高速度の天井を本当に押し上げる（バテ減算はこの後に効く）
       if (staminaFrac <= 0) {
         effectiveMax = Math.min(h.cruiseSpeed * CONFIG.BATE_SPEED_FLOOR, effectiveMax);
       } else if (staminaFrac < CONFIG.BATE_THRESH_2) {
@@ -1073,12 +1156,35 @@
       // Leg animation phase
       h.legPhase += (h.speed / 3.0) * 2 * Math.PI * dt;
 
+      // ── プレイヤー馬のレース統計（講評用・安価）──
+      if (isPlayer) {
+        const ps = state.playerStats;
+        if (h.isKakari) ps.kakariTime += dt;
+        if (h.isWalled && remaining < 600) ps.blockedFinalTime += dt;
+        const halfway = cond.distance * 0.5;
+        if (ps.spurtRemain === null && h.progress > halfway && h.speed > h.cruiseSpeed + 0.6) {
+          ps.spurtRemain = remaining;
+        }
+        if (ps.rankAtHalf === null && h.progress >= halfway) {
+          // 半分通過時の順位（前にいる頭数＋1）。毎ステップではなく1回だけ数える
+          let ahead = 0;
+          for (let j = 0; j < horses.length; j++) {
+            if (j !== i && horses[j].progress > h.progress) ahead++;
+          }
+          ps.rankAtHalf = ahead + 1;
+        }
+      }
+
       // ── Finish check ──（行き過ぎ分を補間して正確な通過時刻を出す）
       if (h.progress >= cond.distance) {
         h.finished = true;
         const overshoot = h.progress - cond.distance;
         h.finishTime = state.elapsed - (h.speed > 0.1 ? overshoot / h.speed : 0);
         h.progress = cond.distance;
+        if (isPlayer) {
+          state.playerStats.staminaAtFinish = staminaFrac;
+          state.playerStats.whipCount = h.whipCount;
+        }
         state.results.push({ index: i, finishTime: h.finishTime, rank: 0 });
         state.results.sort((a, b) => a.finishTime - b.finishTime);
         state.results.forEach((r, ri) => { r.rank = ri + 1; });
@@ -1389,10 +1495,15 @@
     if (raceState && racePhase === 'running' && !shownResults) {
       accumulator += dt;
       accumulator = Math.min(accumulator, 0.1);
+      let steppedThisFrame = false;
       while (accumulator >= SIM_DT) {
         stepRace(raceState, SIM_DT, currentInput);
         accumulator -= SIM_DT;
+        steppedThisFrame = true;
       }
+      // 鞭はエッジトリガ：stepRaceが走って消費した場合だけクリア（1タップ＝1発）。
+      // ステップが無いフレームでクリアするとタップを取りこぼすため
+      if (steppedThisFrame) currentInput.whip = false;
 
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
@@ -1438,11 +1549,22 @@
     stEl.style.background = h.stamina < CONFIG.STAMINA_MAX * 0.15 ? '#ff4444' :
                              h.stamina < CONFIG.STAMINA_MAX * 0.30 ? '#ffaa00' : '#44ff44';
     document.getElementById('hudSpeedFill').style.width = spPct + '%';
-    document.getElementById('hudKakari').style.display = h.isKakari ? 'block' : 'none';
+
+    // 戦術バッジ（風よけ／前が壁／掛かり）
+    document.getElementById('badgeSlip').style.display   = h.inSlip   ? 'inline-block' : 'none';
+    document.getElementById('badgeWall').style.display   = h.isWalled ? 'inline-block' : 'none';
+    document.getElementById('badgeKakari').style.display = h.isKakari ? 'inline-block' : 'none';
+
+    // 鞭ボタンの使用可否表示（仕様7.2）
+    const whipBtn = document.getElementById('btnWhip');
+    const whipUnavailable = h.whipCdTimer > 0 || h.stamina <= 0 || h.isKakari;
+    whipBtn.style.opacity = whipUnavailable ? '0.35' : '1';
+    document.getElementById('btnWhipSub').style.display =
+      (h.whipEff < 0.8 && !whipUnavailable) ? 'block' : 'none';
   }
 
   // ==== SECTION: INPUT ====
-  const currentInput = { accel: false, hold: false, laneDir: 0 };
+  const currentInput = { accel: false, hold: false, laneDir: 0, whip: false };
 
   let swipeStartX = null;
 
@@ -1490,6 +1612,13 @@
       btnHold.addEventListener (ev, () => { currentInput.hold  = false; });
     });
 
+    // 鞭ボタン：押した瞬間にワンショット発火（長押しではない）。
+    // currentInput.whip はゲームループが stepRace バッチ後にクリアする
+    const btnWhip = document.getElementById('btnWhip');
+    ['touchstart','mousedown'].forEach(ev => {
+      btnWhip.addEventListener(ev, e => { e.preventDefault(); currentInput.whip = true; });
+    });
+
     // Keyboard fallback for desktop testing
     window.addEventListener('keydown', e => {
       if (e.repeat) return;
@@ -1497,6 +1626,7 @@
       else if (e.key === 'ArrowDown') currentInput.hold = true;
       else if (e.key === 'ArrowLeft') { currentInput.laneDir = -1; setTimeout(() => { currentInput.laneDir = 0; }, 80); }
       else if (e.key === 'ArrowRight') { currentInput.laneDir = 1; setTimeout(() => { currentInput.laneDir = 0; }, 80); }
+      else if (e.key === 'w' || e.key === 'W') currentInput.whip = true; // 鞭（ワンショット・ループでクリア）
     });
     window.addEventListener('keyup', e => {
       if (e.key === 'ArrowUp' || e.key === ' ') currentInput.accel = false;
@@ -2052,6 +2182,7 @@
     currentInput.accel = false;
     currentInput.hold = false;
     currentInput.laneDir = 0;
+    currentInput.whip = false;
     pickedIndices = [];
     pending = { cond: null, field: null };
     // Cancel any pending gate timers
