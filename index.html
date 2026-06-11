@@ -2372,6 +2372,17 @@
     ceremonyTimers = [];
   }
 
+  // 掲示板オーバーレイのタップリスナーは常に1つだけ保持する
+  // （ボタン経由で結果へ進むと解除されず、次レースで旧stateの結果画面が出るバグを防ぐ）
+  let ceremonyTapHandler = null;
+  function _removeCeremonyTapHandler() {
+    if (ceremonyTapHandler) {
+      document.getElementById('screenCeremony')
+        .removeEventListener('pointerdown', ceremonyTapHandler);
+      ceremonyTapHandler = null;
+    }
+  }
+
   function showCeremony(state) {
     _clearCeremonyTimers();
 
@@ -2452,6 +2463,7 @@
 
     // Tap-to-skip / proceed: overlay tap
     const overlay = document.getElementById('screenCeremony');
+    _removeCeremonyTapHandler();
     function onCeremonyTap(e) {
       // Ignore taps on the button
       if (e.target === document.getElementById('btnCeremonyNext') ||
@@ -2460,12 +2472,11 @@
         // First tap: skip remaining row animation, show all
         showAllRows();
       } else {
-        // Second tap on overlay: go to result
-        overlay.removeEventListener('pointerdown', onCeremonyTap);
-        _clearCeremonyTimers();
+        // Second tap on overlay: go to result（リスナー解除は showFinishScreen 側で一元化）
         showFinishScreen(state);
       }
     }
+    ceremonyTapHandler = onCeremonyTap;
     overlay.addEventListener('pointerdown', onCeremonyTap);
   }
 
@@ -2504,6 +2515,7 @@
   // ── Finish/result screen ──
   function showFinishScreen(state) {
     _clearCeremonyTimers();
+    _removeCeremonyTapHandler();
 
     const playerResult = state.results.find(r => r.index === state.playerIndex);
     const rank = playerResult?.rank ?? state.finishedCount;
@@ -2605,6 +2617,7 @@
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
     _clearCeremonyTimers();
+    _removeCeremonyTapHandler();
     gateSignalTime = null;
     gateTapHandled = false;
     gateSignalFired = false;
