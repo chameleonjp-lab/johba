@@ -293,7 +293,83 @@
     .finish-row.player-row { background: rgba(68,170,255,0.18); }
     .finish-rank { font-size: 13px; font-weight: 700; width: 24px; color: #aaa; }
     .finish-name { font-size: 14px; font-weight: 700; color: #eee; }
-    #resultBtns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    #resultBtns { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 300px; }
+    #resultBtns .btn-primary, #resultBtns .btn-secondary, #resultBtns .btn-tertiary {
+      width: 100%;
+    }
+    .btn-tertiary {
+      font-size: 14px; padding: 9px 20px;
+      border-radius: 20px;
+      background: transparent; color: #7ab; border: 1px solid #446;
+      font-weight: 600; cursor: pointer; touch-action: manipulation;
+      min-height: 44px; text-align: center; text-decoration: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-tertiary:active { background: rgba(119,170,187,0.1); }
+
+    #resultRecap {
+      font-size: 13px; color: #888; margin-bottom: 6px;
+    }
+    #resultComment {
+      font-size: 13px; color: #aaddff; margin-bottom: 14px;
+      line-height: 1.6; max-width: 320px; text-align: center;
+      padding: 8px 12px; background: rgba(68,170,255,0.08);
+      border-radius: 8px; border: 1px solid rgba(68,170,255,0.2);
+    }
+
+    /* ===== CEREMONY SCREEN ===== */
+    #screenCeremony {
+      background: rgba(0,0,0,0.92);
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+    }
+    #ceremonyHeader {
+      flex-shrink: 0; width: 100%;
+      background: #111128;
+      border-bottom: 1px solid #2a2a50;
+      padding: 12px 14px 10px;
+      text-align: center;
+    }
+    #ceremonyHeader .cerConfirm {
+      font-size: 22px; font-weight: 900; color: #ffe066;
+      letter-spacing: 3px; text-shadow: 0 0 12px #aa7700;
+    }
+    #ceremonyHeader .cerSub {
+      font-size: 12px; color: #888; margin-top: 2px;
+    }
+    #photoJudge {
+      font-size: 28px; font-weight: 900; color: #ff4444;
+      text-align: center; padding: 20px;
+      animation: photoFlash 0.5s ease-in-out infinite alternate;
+      display: none;
+    }
+    @keyframes photoFlash {
+      0%  { opacity: 0.5; transform: scale(0.96); }
+      100%{ opacity: 1.0; transform: scale(1.04); }
+    }
+    #ceremonyRows {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      width: 100%; padding: 6px 10px 80px;
+    }
+    .cer-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 8px; border-radius: 8px; margin-bottom: 3px;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .cer-row.visible { opacity: 1; }
+    .cer-row.player-row { background: rgba(68,170,255,0.18); }
+    .cer-rank { font-size: 13px; font-weight: 700; width: 30px; color: #aaa; flex-shrink: 0; }
+    .cer-name { font-size: 13px; font-weight: 700; color: #eee; flex: 1; min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cer-time { font-size: 12px; color: #888; flex-shrink: 0; }
+    #ceremonyNextBtn {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background: linear-gradient(0deg, rgba(0,0,0,0.95) 70%, transparent);
+      padding: 12px 16px 16px;
+      display: flex; justify-content: center;
+      z-index: 60;
+    }
   </style>
 </head>
 <body>
@@ -457,17 +533,35 @@
     </div>
   </div>
 
+  <!-- ---- Ceremony screen (掲示板演出) ---- -->
+  <div id="screenCeremony" class="screen-overlay">
+    <div id="ceremonyHeader">
+      <div class="cerConfirm">確定</div>
+      <div style="font-size:15px; font-weight:700; color:#fff; margin-top:2px;">レース結果</div>
+      <div id="ceremonyCondLine" class="cerSub"></div>
+    </div>
+    <div id="photoJudge">写真判定</div>
+    <div id="ceremonyRows"></div>
+    <div id="ceremonyNextBtn">
+      <button id="btnCeremonyNext" class="btn-primary">結果へ</button>
+    </div>
+  </div>
+
   <!-- ---- Result/finish screen ---- -->
   <div id="screenResult" class="screen-overlay" style="align-items:center;">
     <h2>レース終了！</h2>
+    <div id="resultRecap"></div>
     <div id="resultRank"></div>
     <div id="resultHorse"></div>
     <div id="resultTime"></div>
     <div id="resultScore"></div>
+    <div id="resultComment"></div>
     <div id="finishOrderList"></div>
     <div id="resultBtns">
       <button id="btnRetry" class="btn-primary">もう一度走る</button>
+      <button id="btnShare2" class="btn-secondary">結果をシェア</button>
       <button id="btnToTitle" class="btn-secondary">タイトルへ</button>
+      <a id="btnToLab" class="btn-tertiary" href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
   </div>
 
@@ -567,6 +661,22 @@
     },
     TIME_BONUS_PER_TENTH: 5,
     TIME_BONUS_MAX: 300,
+
+    // Weather / ceremony
+    WEATHER_FOG_NEAR:  { '晴': 100, '曇': 90, '雨': 70 },
+    WEATHER_FOG_FAR:   { '晴': 350, '曇': 300, '雨': 240 },
+    WEATHER_SKY:       { '晴': 0x87CEEB, '曇': 0x9fa8b0, '雨': 0x6e7a85 },
+    WEATHER_AMBIENT:   { '晴': 0.6,  '曇': 0.5,  '雨': 0.42 },
+    WEATHER_SUN:       { '晴': 0.85, '曇': 0.45, '雨': 0.3  },
+    GOING_BROWN:       0x6e5a3a,  // lerp target for heavy going
+    GOING_LERP:        { '良': 0, '稍重': 0.15, '重': 0.30, '不良': 0.45 },
+    GOING_GROUND_DARK: { '良': 0, '稍重': 0,   '重': 0.12, '不良': 0.22 },
+    RAIN_COUNT: 400,
+    RAIN_SPEED: 28,      // m/s downward
+    CEREMONY_ROW_INTERVAL: 280, // ms between rows appearing
+    CEREMONY_PHOTO_THRESH: 0.08, // s gap for photo-finish
+    CEREMONY_PHOTO_SHOW: 1400,   // ms to show photo-judge text
+    FASTFWD_STEPS: 3,    // extra sim steps per frame after player finishes
 
     // Supabase (Phase 5 — leave empty for now)
     SUPABASE_URL: '',
@@ -1276,17 +1386,25 @@
 
   const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.5, 500);
 
-  // Lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  // Lighting — keep refs for applyWeather
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambient);
   const sun = new THREE.DirectionalLight(0xffffff, 0.8);
   sun.position.set(50, 100, 50);
   scene.add(sun);
+
+  // envRefs populated by buildCourse() below
+  const envRefs = { ambient, sun, trackMat: null, groundMat: null };
+  // Base colors captured once so repeated applyWeather calls don't compound lerp
+  const _baseTrackColor = new THREE.Color(0xc8a86b);
+  const _baseGroundColor = new THREE.Color(0x3a7d44);
 
   // ── Course geometry ──
   function buildCourse() {
     // Ground plane
     const groundGeo = new THREE.PlaneGeometry(800, 800);
     const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44 });
+    envRefs.groundMat = groundMat;
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.05;
@@ -1315,6 +1433,7 @@
     trackGeo.setIndex(indices);
     trackGeo.computeVertexNormals();
     const trackMat = new THREE.MeshLambertMaterial({ color: 0xc8a86b, side: THREE.DoubleSide });
+    envRefs.trackMat = trackMat;
     const track = new THREE.Mesh(trackGeo, trackMat);
     scene.add(track);
 
@@ -1370,6 +1489,87 @@
     }
   }
   buildCourse();
+
+  // ── Weather system ──
+
+  // Lazy rain object — created once on first rain race
+  let rainPoints = null;
+  let rainVisible = false;
+
+  function _ensureRain() {
+    if (rainPoints) return;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(CONFIG.RAIN_COUNT * 3);
+    for (let i = 0; i < CONFIG.RAIN_COUNT; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * 60;
+      positions[i * 3 + 1] = Math.random() * 40;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({ color: 0xaac4dd, size: 0.18, transparent: true, opacity: 0.65 });
+    rainPoints = new THREE.Points(geo, mat);
+    rainPoints.visible = false;
+    scene.add(rainPoints);
+  }
+
+  // Reuse vector to avoid per-frame allocations
+  const _rainPosAttr_cache = { last: 0 };
+
+  function updateRain(dt) {
+    if (!rainVisible || !rainPoints) return;
+    const pos = rainPoints.geometry.attributes.position.array;
+    const drop = CONFIG.RAIN_SPEED * dt;
+    for (let i = 0; i < CONFIG.RAIN_COUNT; i++) {
+      pos[i * 3 + 1] -= drop;
+      if (pos[i * 3 + 1] < -2) {
+        pos[i * 3 + 1] += 42; // wrap to top
+      }
+    }
+    rainPoints.geometry.attributes.position.needsUpdate = true;
+    // Re-center on camera (cheap; integer-snap to avoid micro jitter)
+    rainPoints.position.x = Math.round(camera.position.x);
+    rainPoints.position.z = Math.round(camera.position.z);
+  }
+
+  function applyWeather(cond) {
+    const { weather, going } = cond;
+    const sky = CONFIG.WEATHER_SKY[weather] ?? CONFIG.WEATHER_SKY['晴'];
+    const fogNear = CONFIG.WEATHER_FOG_NEAR[weather] ?? 100;
+    const fogFar  = CONFIG.WEATHER_FOG_FAR[weather] ?? 350;
+
+    scene.background.setHex(sky);
+    scene.fog.color.setHex(sky);
+    scene.fog.near = fogNear;
+    scene.fog.far  = fogFar;
+
+    envRefs.ambient.intensity = CONFIG.WEATHER_AMBIENT[weather] ?? 0.6;
+    envRefs.sun.intensity     = CONFIG.WEATHER_SUN[weather]     ?? 0.85;
+
+    // Track: lerp from base color toward brown based on going
+    const lerpAmt   = CONFIG.GOING_LERP[going]   ?? 0;
+    const darkAmt   = CONFIG.GOING_GROUND_DARK[going] ?? 0;
+    const brownColor = new THREE.Color(CONFIG.GOING_BROWN);
+
+    const newTrackColor = _baseTrackColor.clone().lerp(brownColor, lerpAmt);
+    envRefs.trackMat.color.copy(newTrackColor);
+
+    const newGroundColor = _baseGroundColor.clone().lerp(brownColor, darkAmt);
+    envRefs.groundMat.color.copy(newGroundColor);
+
+    // Rain visibility
+    if (weather === '雨') {
+      _ensureRain();
+      rainPoints.visible = true;
+      rainVisible = true;
+    } else {
+      if (rainPoints) rainPoints.visible = false;
+      rainVisible = false;
+    }
+  }
+
+  function resetWeather() {
+    applyWeather({ weather: '晴', going: '良' });
+  }
 
   // ── Horse model ──
   function createHorseModel(color, silksColor) {
@@ -1482,9 +1682,13 @@
   let lastTime = performance.now();
   let accumulator = 0;
   const SIM_DT = 1 / 60;
+  const MAX_STEPS_PER_FRAME = 16; // hard ceiling to avoid infinite loop
 
   // Phase flag: 'idle' | 'gate' | 'running'
   let racePhase = 'idle';
+
+  // Whether player has finished (enables fast-forward of remaining horses)
+  let playerFinished = false;
 
   function gameLoop(now) {
     requestAnimationFrame(gameLoop);
@@ -1496,28 +1700,55 @@
       accumulator += dt;
       accumulator = Math.min(accumulator, 0.1);
       let steppedThisFrame = false;
-      while (accumulator >= SIM_DT) {
+      let stepCount = 0;
+      while (accumulator >= SIM_DT && stepCount < MAX_STEPS_PER_FRAME) {
         stepRace(raceState, SIM_DT, currentInput);
         accumulator -= SIM_DT;
         steppedThisFrame = true;
+        stepCount++;
+
+        // Fast-forward: after player finishes, run extra steps to finish the field quickly
+        if (playerFinished && raceState.finishedCount < 12) {
+          for (let x = 0; x < CONFIG.FASTFWD_STEPS && stepCount < MAX_STEPS_PER_FRAME; x++) {
+            stepRace(raceState, SIM_DT, { accel: false, hold: false, laneDir: 0, whip: false });
+            stepCount++;
+          }
+        }
       }
+
+      // Check if player just finished this frame
+      if (!playerFinished && raceState.horses[raceState.playerIndex].finished) {
+        playerFinished = true;
+      }
+
       // 鞭はエッジトリガ：stepRaceが走って消費した場合だけクリア（1タップ＝1発）。
       // ステップが無いフレームでクリアするとタップを取りこぼすため
       if (steppedThisFrame) currentInput.whip = false;
 
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
-      updateHUD(raceState);
+      if (!playerFinished) updateHUD(raceState);
 
       if (raceState.finishedCount === 12 && !shownResults) {
         shownResults = true;
-        showFinishScreen(raceState);
+        // Hide HUD/controls and start ceremony
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+        showCeremony(raceState);
       }
     } else if (raceState && racePhase === 'gate') {
       // Still render / update camera while in gate screen
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
     }
+
+    // Rain update runs every frame when visible (gate or running)
+    if (rainVisible) {
+      const rawDiff = _rainPosAttr_cache.last > 0 ? (now - _rainPosAttr_cache.last) : 16;
+      const frameDt = Math.min(rawDiff / 1000, 0.05);
+      updateRain(frameDt);
+    }
+    _rainPosAttr_cache.last = now;
 
     renderer.render(scene, camera);
     frameCount++;
@@ -1540,7 +1771,8 @@
 
     document.getElementById('hudRank').textContent =
       `${h.finished ? state.results.find(r => r.index === state.playerIndex)?.rank ?? '?' : currentRank}番手 / 残り${Math.round(remaining)}m`;
-    document.getElementById('hudPace').textContent = paceLabel(state);
+    document.getElementById('hudPace').textContent =
+      'ペース:' + (state.paceRecorded ? paceLabel(state) : '--');
 
     const stPct = (h.stamina / CONFIG.STAMINA_MAX * 100).toFixed(1);
     const spPct = (h.speed / h.maxSpeed * 100).toFixed(1);
@@ -1676,7 +1908,7 @@
 
   // Show/hide screens
   function showScreen(id) {
-    const ids = ['screenTitle', 'screenCond', 'screenEntries', 'screenLottery', 'screenGate', 'screenResult'];
+    const ids = ['screenTitle', 'screenCond', 'screenEntries', 'screenLottery', 'screenGate', 'screenResult', 'screenCeremony'];
     ids.forEach(sid => {
       const el = document.getElementById(sid);
       el.style.display = (sid === id) ? 'flex' : 'none';
@@ -1973,6 +2205,9 @@
   function openGateScreen() {
     const { cond, field } = pending;
 
+    // Apply weather/going visuals for this race
+    applyWeather(cond);
+
     // Build/reset horse meshes
     horseMeshes.forEach(m => scene.remove(m));
     horseMeshes = [];
@@ -1984,6 +2219,7 @@
 
     raceState = createRaceState(field, cond, makeRng((Date.now() + 1) & 0xffffffff), playerIdx);
     shownResults = false;
+    playerFinished = false;
     accumulator = 0;
     racePhase = 'gate';
 
@@ -2116,8 +2352,159 @@
     e.preventDefault();
   }, { passive: false });
 
+  // ── Ceremony (掲示板演出) ──
+
+  // Module-level timer handles so resetAll can cancel them
+  let ceremonyTimers = [];
+
+  function _ceremonyTimeout(fn, ms) {
+    const id = setTimeout(fn, ms);
+    ceremonyTimers.push(id);
+    return id;
+  }
+  function _ceremonyInterval(fn, ms) {
+    const id = setInterval(fn, ms);
+    ceremonyTimers.push(id);
+    return id;
+  }
+  function _clearCeremonyTimers() {
+    ceremonyTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
+    ceremonyTimers = [];
+  }
+
+  function showCeremony(state) {
+    _clearCeremonyTimers();
+
+    const { cond } = state;
+    document.getElementById('ceremonyCondLine').textContent =
+      `${cond.distance}m・${cond.going}・ペース:${paceLabel(state)}`;
+
+    // Build rows (initially hidden)
+    const rowsEl = document.getElementById('ceremonyRows');
+    rowsEl.innerHTML = '';
+    const rowEls = [];
+    state.results.forEach((res) => {
+      const def = state.field[res.index];
+      const isPlayer = res.index === state.playerIndex;
+      const fc = hexColor(CONFIG.FRAME_COLORS[def.frame - 1]);
+      const tc = frameTextColor(def.frame - 1);
+      const row = document.createElement('div');
+      row.className = 'cer-row' + (isPlayer ? ' player-row' : '');
+      row.innerHTML = `
+        <span class="cer-rank">${res.rank}着</span>
+        <div class="frame-chip" style="background:${fc};color:${tc};width:22px;height:22px;font-size:10px;flex-shrink:0;">${def.frame}</div>
+        <span style="font-size:12px;color:#aaa;width:20px;flex-shrink:0;">${def.num}</span>
+        <span class="cer-name">${def.name}${isPlayer ? '（あなた）' : ''}</span>
+        <span class="cer-time">${res.finishTime.toFixed(2)}s</span>
+      `;
+      rowsEl.appendChild(row);
+      rowEls.push(row);
+    });
+
+    const photoJudgeEl = document.getElementById('photoJudge');
+    photoJudgeEl.style.display = 'none';
+
+    // Show the ceremony screen (HUD/controls already hidden by caller)
+    showScreen('screenCeremony');
+
+    // Track whether rows animation is complete (for tap-to-skip logic)
+    let rowsAnimDone = false;
+    let rowsShown = 0;
+    let rowInterval = null;
+
+    function showAllRows() {
+      rowEls.forEach(r => r.classList.add('visible'));
+      rowsShown = rowEls.length;
+      rowsAnimDone = true;
+      if (rowInterval) { clearInterval(rowInterval); rowInterval = null; }
+    }
+
+    function startRowAnimation() {
+      rowInterval = _ceremonyInterval(() => {
+        if (rowsShown < rowEls.length) {
+          rowEls[rowsShown].classList.add('visible');
+          rowsShown++;
+        }
+        if (rowsShown >= rowEls.length) {
+          clearInterval(rowInterval);
+          rowInterval = null;
+          rowsAnimDone = true;
+        }
+      }, CONFIG.CEREMONY_ROW_INTERVAL);
+    }
+
+    // Photo-finish check
+    const gap = state.results.length >= 2
+      ? (state.results[1].finishTime - state.results[0].finishTime)
+      : 1;
+
+    function beginRowReveal() {
+      photoJudgeEl.style.display = 'none';
+      startRowAnimation();
+    }
+
+    if (gap < CONFIG.CEREMONY_PHOTO_THRESH) {
+      photoJudgeEl.style.display = 'block';
+      _ceremonyTimeout(beginRowReveal, CONFIG.CEREMONY_PHOTO_SHOW);
+    } else {
+      beginRowReveal();
+    }
+
+    // Tap-to-skip / proceed: overlay tap
+    const overlay = document.getElementById('screenCeremony');
+    function onCeremonyTap(e) {
+      // Ignore taps on the button
+      if (e.target === document.getElementById('btnCeremonyNext') ||
+          document.getElementById('btnCeremonyNext').contains(e.target)) return;
+      if (!rowsAnimDone) {
+        // First tap: skip remaining row animation, show all
+        showAllRows();
+      } else {
+        // Second tap on overlay: go to result
+        overlay.removeEventListener('pointerdown', onCeremonyTap);
+        _clearCeremonyTimers();
+        showFinishScreen(state);
+      }
+    }
+    overlay.addEventListener('pointerdown', onCeremonyTap);
+  }
+
+  document.getElementById('btnCeremonyNext').addEventListener('click', () => {
+    _clearCeremonyTimers();
+    // We need the current raceState — it's still set at this point
+    showFinishScreen(raceState);
+  });
+
+  // ── 講評（one-line commentary）──
+  function generateComment(state, rank) {
+    const ps = state.playerStats;
+    const startDelay = state.playerStartDelay ?? 0.15;
+
+    if (rank === 1 && ps.staminaAtFinish !== null && ps.staminaAtFinish >= 0.15)
+      return 'スタミナを残して直線に向けた好騎乗だった';
+    if (rank === 1)
+      return '持てる力を出し切る完璧な騎乗だった';
+    if (ps.kakariTime > 3)
+      return '序盤に掛かってスタミナを浪費してしまった';
+    if (startDelay >= 0.5)
+      return '痛恨の出遅れ。スタートで負けたレースだった';
+    if (ps.blockedFinalTime > 1.5)
+      return '直線で前が壁になり、脚を出し切れなかった';
+    if (ps.spurtRemain !== null && ps.spurtRemain > 800 && rank >= 4)
+      return '仕掛けが早く、最後に脚が上がってしまった';
+    if (ps.staminaAtFinish !== null && ps.staminaAtFinish > 0.35 && rank >= 4)
+      return '脚を余して終わった。もう少し早く仕掛けたかった';
+    if (ps.whipCount === 0 && rank >= 4)
+      return '鞭を使わずじまい。直線でもうひと押しできたはず';
+    if (rank <= 3)
+      return '展開に乗った好騎乗で馬券圏内を確保した';
+    return '展開どおりの堅実な騎乗だった';
+  }
+
   // ── Finish/result screen ──
   function showFinishScreen(state) {
+    _clearCeremonyTimers();
+
     const playerResult = state.results.find(r => r.index === state.playerIndex);
     const rank = playerResult?.rank ?? state.finishedCount;
     const time = playerResult?.finishTime ?? state.elapsed;
@@ -2132,10 +2519,18 @@
 
     const rankLabels = ['','1着','2着','3着','4着','5着','6着','7着','8着','9着','10着','11着','12着'];
 
+    // Recap line
+    document.getElementById('resultRecap').textContent =
+      `${state.cond.distance}m ${state.cond.going} / ペース:${paceLabel(state)}`;
+
     document.getElementById('resultRank' ).textContent = rankLabels[rank] ?? `${rank}着`;
     document.getElementById('resultHorse').textContent = `${h.num}番 ${h.name}`;
-    document.getElementById('resultTime' ).textContent = `走破タイム：${time.toFixed(1)}s`;
+    document.getElementById('resultTime' ).textContent = `走破タイム：${time.toFixed(2)}s`;
     document.getElementById('resultScore').textContent = `スコア：${score}点（着順${rankPts} + タイム${timeBonus}）`;
+
+    // 講評
+    document.getElementById('resultComment').textContent =
+      `講評：「${generateComment(state, rank)}」`;
 
     // Full finish order list
     const listEl = document.getElementById('finishOrderList');
@@ -2156,10 +2551,30 @@
       listEl.appendChild(row);
     });
 
+    // Store result data for share button
+    document.getElementById('btnShare2').dataset.shareText =
+      `ジョーバで${state.cond.distance}m${rankLabels[rank] ?? rank+'着'}！スコア${score}点 #ジョーバ`;
+
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
     showScreen('screenResult');
   }
+
+  document.getElementById('btnShare2').addEventListener('click', async () => {
+    const btn = document.getElementById('btnShare2');
+    const text = btn.dataset.shareText ?? 'ジョーバをプレイしました！ #ジョーバ';
+    const shareData = { text, url: location.href };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(text + ' ' + location.href);
+        const orig = btn.textContent;
+        btn.textContent = 'コピーしました';
+        setTimeout(() => { btn.textContent = orig; }, 1800);
+      }
+    } catch (_) {}
+  });
 
   document.getElementById('btnRetry').addEventListener('click', () => {
     resetAll();
@@ -2179,18 +2594,22 @@
     shownResults = false;
     accumulator = 0;
     racePhase = 'idle';
+    playerFinished = false;
     currentInput.accel = false;
     currentInput.hold = false;
     currentInput.laneDir = 0;
     currentInput.whip = false;
     pickedIndices = [];
     pending = { cond: null, field: null };
-    // Cancel any pending gate timers
+    // Cancel any pending gate / ceremony timers
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
+    _clearCeremonyTimers();
     gateSignalTime = null;
     gateTapHandled = false;
     gateSignalFired = false;
+    // Reset weather to sunny default for title screen
+    resetWeather();
   }
 
   </script>
