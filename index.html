@@ -317,6 +317,57 @@
       border-radius: 8px; border: 1px solid rgba(68,170,255,0.2);
     }
 
+    /* ===== NAME INPUT (title screen) ===== */
+    #playerNameWrap {
+      width: 100%; max-width: 260px;
+      display: flex; flex-direction: column; gap: 4px;
+      margin-bottom: 16px;
+    }
+    #playerNameWrap label {
+      font-size: 12px; color: #888; text-align: left;
+    }
+    #playerName {
+      -webkit-user-select: auto; user-select: auto;
+      -webkit-touch-callout: default;
+      font-size: 16px; padding: 10px 14px;
+      border-radius: 12px; border: 1px solid #446;
+      background: rgba(255,255,255,0.08); color: #fff;
+      width: 100%; min-height: 44px;
+      outline: none;
+      touch-action: auto;
+      pointer-events: auto;
+    }
+    #playerName::placeholder { color: #556; }
+    #playerName:focus { border-color: #44aaff; background: rgba(68,170,255,0.1); }
+
+    /* ===== RANKING SECTION (result screen) ===== */
+    #rankingSection {
+      width: 100%; max-width: 360px;
+      margin-top: 4px; margin-bottom: 16px;
+    }
+    #rankingSection h3 {
+      font-size: 13px; color: #88aacc;
+      margin-bottom: 6px; font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    #submitStatus {
+      font-size: 12px; color: #aaa;
+      margin-bottom: 6px; min-height: 16px;
+    }
+    #rankingBox {
+      width: 100%;
+    }
+    .rank-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 6px;
+      font-size: 12px; margin-bottom: 2px;
+    }
+    .rank-row.my-row { background: rgba(68,170,255,0.18); }
+    .rank-no  { width: 28px; color: #888; font-weight: 700; flex-shrink: 0; }
+    .rank-name { flex: 1; min-width: 0; color: #eee; overflow: hidden;
+      white-space: nowrap; text-overflow: ellipsis; }
+    .rank-score { color: #ffe066; font-weight: 700; flex-shrink: 0; }
+
     /* ===== CEREMONY SCREEN ===== */
     #screenCeremony {
       background: rgba(0,0,0,0.92);
@@ -446,6 +497,10 @@
   <div id="screenTitle" class="screen-overlay" style="display:flex;">
     <h1>ジョーバ</h1>
     <p class="subtitle">騎手視点3D競馬ゲーム</p>
+    <div id="playerNameWrap">
+      <label for="playerName">騎手名（ランキング用・10文字まで）</label>
+      <input id="playerName" type="text" maxlength="10" autocomplete="nickname" placeholder="名前を入力">
+    </div>
     <div class="title-btns">
       <button id="btnStart" class="btn-primary">レース開始</button>
       <button id="btnRules" class="btn-secondary">ルール説明</button>
@@ -557,6 +612,11 @@
     <div id="resultScore"></div>
     <div id="resultComment"></div>
     <div id="finishOrderList"></div>
+    <div id="rankingSection">
+      <h3>ランキング（ベストスコア）</h3>
+      <div id="submitStatus"></div>
+      <div id="rankingBox"></div>
+    </div>
     <div id="resultBtns">
       <button id="btnRetry" class="btn-primary">もう一度走る</button>
       <button id="btnShare2" class="btn-secondary">結果をシェア</button>
@@ -678,11 +738,11 @@
     CEREMONY_PHOTO_SHOW: 1400,   // ms to show photo-judge text
     FASTFWD_STEPS: 3,    // extra sim steps per frame after player finishes
 
-    // Supabase (Phase 5 — leave empty for now)
-    SUPABASE_URL: '',
-    SUPABASE_KEY: '',
+    // Supabase (Phase 5)
+    SUPABASE_URL: 'https://mlpnjgezrnhdxsxolyzj.supabase.co',
+    SUPABASE_KEY: 'sb_publishable_drzcy0v97knU6FgjqSgBHw_0A9XPdFM',
     GAME_SLUG: 'johba',
-    CLIENT_VERSION: 'v0.1',
+    CLIENT_VERSION: 'v1',
 
     // Frame colors (JRA 枠番1-8)
     FRAME_COLORS: [
@@ -1921,7 +1981,17 @@
   let pickedIndices = []; // indices into field for the 3 wished horses
   let playerIdx = 0;
 
-  // ── Title screen ──
+  // ── Title screen + name input ──
+  // Load persisted name on startup
+  (function loadPlayerName() {
+    const saved = localStorage.getItem('johba_player_name') ?? '';
+    document.getElementById('playerName').value = saved;
+  })();
+
+  document.getElementById('playerName').addEventListener('input', () => {
+    localStorage.setItem('johba_player_name', document.getElementById('playerName').value);
+  });
+
   document.getElementById('btnStart').addEventListener('click', () => {
     goToCondScreen();
   });
@@ -2203,6 +2273,7 @@
   let gateFeedbackTimeout = null;
 
   function openGateScreen() {
+    hasSubmitted = false; // reset per-race submission guard
     const { cond, field } = pending;
 
     // Apply weather/going visuals for this race
@@ -2512,6 +2583,101 @@
     return '展開どおりの堅実な騎乗だった';
   }
 
+  // ==== SECTION: SUPABASE ====
+  // ── Supabase RPC helper ──
+  async function supabaseRpc(fn, body) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: {
+          apikey: CONFIG.SUPABASE_KEY,
+          Authorization: `Bearer ${CONFIG.SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error(`RPC ${fn} failed: ${res.status}`);
+      return await res.json();
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  // ── Ranking render ──
+  function renderRanking(rows, playerName) {
+    const box = document.getElementById('rankingBox');
+    box.innerHTML = '';
+    if (!Array.isArray(rows) || rows.length === 0) {
+      box.textContent = 'ランキングを取得できませんでした';
+      return;
+    }
+    rows.forEach(r => {
+      const no    = r.rank_no ?? r.rank ?? '?';
+      const name  = r.display_name ?? r.name ?? '?';
+      const score = r.score ?? '?';
+      if (name === '?' && score === '?') return; // skip unreadable rows
+      const isMe = playerName && name === playerName;
+      const row = document.createElement('div');
+      row.className = 'rank-row' + (isMe ? ' my-row' : '');
+      row.innerHTML =
+        `<span class="rank-no">${no}位</span>` +
+        `<span class="rank-name">${name}</span>` +
+        `<span class="rank-score">${score}点</span>`;
+      box.appendChild(row);
+    });
+    if (box.children.length === 0) {
+      box.textContent = 'ランキングを取得できませんでした';
+    }
+  }
+
+  // ── Module-level submission guard (reset per race in openGateScreen) ──
+  let hasSubmitted = false;
+
+  // ── submitAndLoadRanking ──
+  async function submitAndLoadRanking(score) {
+    if (hasSubmitted) return;
+    hasSubmitted = true; // guard set BEFORE any await
+
+    const statusEl = document.getElementById('submitStatus');
+    const boxEl    = document.getElementById('rankingBox');
+    const rawName  = (localStorage.getItem('johba_player_name') ?? '').trim();
+
+    // If name is empty: skip submit but still load ranking
+    if (!rawName) {
+      statusEl.textContent = '名前未入力のためランキング未送信（タイトル画面で入力できます）';
+    } else {
+      statusEl.textContent = 'ランキング送信中...';
+      try {
+        await supabaseRpc('submit_score', {
+          p_display_name:   rawName,
+          p_game_slug:      CONFIG.GAME_SLUG,
+          p_score:          Math.round(score),
+          p_client_version: CONFIG.CLIENT_VERSION,
+        });
+        statusEl.textContent = 'ランキング送信完了';
+      } catch (err) {
+        statusEl.textContent = 'ランキング送信失敗（スコアはこの画面でのみ表示）';
+        console.warn('[johba] submit_score failed:', err);
+      }
+    }
+
+    // Load top-10 regardless of whether submit succeeded
+    boxEl.textContent = 'ランキング読み込み中...';
+    try {
+      const rows = await supabaseRpc('get_best_score_ranking', {
+        p_game_slug: CONFIG.GAME_SLUG,
+        p_limit:     10,
+      });
+      renderRanking(rows, rawName);
+    } catch (err) {
+      boxEl.textContent = 'ランキングを取得できませんでした';
+      console.warn('[johba] get_best_score_ranking failed:', err);
+    }
+  }
+
   // ── Finish/result screen ──
   function showFinishScreen(state) {
     _clearCeremonyTimers();
@@ -2569,7 +2735,13 @@
 
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
+    // Clear previous ranking display before showing screen
+    document.getElementById('submitStatus').textContent = '';
+    document.getElementById('rankingBox').textContent = '';
     showScreen('screenResult');
+
+    // Fire-and-forget: submit score and load ranking (hasSubmitted guards re-entry)
+    submitAndLoadRanking(score).catch(() => {});
   }
 
   document.getElementById('btnShare2').addEventListener('click', async () => {
