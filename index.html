@@ -14,6 +14,286 @@
       -webkit-touch-callout: none;
     }
     canvas { display: block; }
+
+    /* ===== SHARED OVERLAY BASE ===== */
+    .screen-overlay {
+      position: fixed; inset: 0;
+      z-index: 50;
+      font-family: system-ui, sans-serif;
+      color: #fff;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn-primary {
+      font-size: 18px;
+      padding: 13px 36px;
+      border-radius: 30px;
+      background: #44aaff;
+      color: #fff;
+      border: none;
+      font-weight: 700;
+      touch-action: manipulation;
+      cursor: pointer;
+      min-height: 48px;
+      min-width: 160px;
+    }
+    .btn-secondary {
+      font-size: 16px;
+      padding: 10px 24px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.15);
+      color: #ddd;
+      border: 1px solid rgba(255,255,255,0.3);
+      font-weight: 600;
+      touch-action: manipulation;
+      cursor: pointer;
+      min-height: 44px;
+    }
+    .btn-primary:active { background: #2288dd; }
+    .btn-secondary:active { background: rgba(255,255,255,0.25); }
+
+    /* ===== MODAL ===== */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 80; display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #1a1a3a; border-radius: 16px; padding: 20px;
+      max-width: 360px; width: 100%; max-height: 80vh; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-box h3 { font-size: 18px; margin-bottom: 12px; color: #44aaff; }
+    .modal-box p, .modal-box li { font-size: 14px; line-height: 1.7; color: #ccc; margin-bottom: 8px; }
+    .modal-box ul { padding-left: 16px; }
+    .modal-close {
+      display: block; width: 100%; margin-top: 16px;
+      padding: 10px; border-radius: 20px;
+      background: rgba(255,255,255,0.1); color: #aaa;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 14px; cursor: pointer; touch-action: manipulation;
+      min-height: 44px;
+    }
+
+    /* ===== TITLE SCREEN ===== */
+    #screenTitle {
+      background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
+      justify-content: center;
+    }
+    #screenTitle h1 {
+      font-size: 52px; font-weight: 900; letter-spacing: 4px; margin: 0 0 8px;
+      text-shadow: 0 0 20px #44aaff;
+    }
+    #screenTitle .subtitle { font-size: 14px; color: #aaa; margin: 0 0 36px; }
+    #screenTitle .title-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 260px; }
+    #screenTitle .sub-links {
+      display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center;
+    }
+    #screenTitle .sub-links button {
+      font-size: 13px; padding: 6px 14px;
+      background: transparent; color: #7ab; border: 1px solid #446;
+      border-radius: 20px; cursor: pointer; touch-action: manipulation;
+      min-height: 36px;
+    }
+    #screenTitle .sub-links a {
+      font-size: 13px; padding: 6px 14px;
+      color: #7ab; border: 1px solid #446;
+      border-radius: 20px; text-decoration: none;
+      display: flex; align-items: center; min-height: 36px;
+    }
+    .tip { font-size: 12px; color: #555; margin-top: 10px; }
+
+    /* ===== COND SCREEN ===== */
+    #screenCond {
+      background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
+      justify-content: center; padding: 20px;
+    }
+    #screenCond .cond-header { font-size: 13px; color: #aaa; margin-bottom: 8px; letter-spacing: 1px; }
+    #screenCond .cond-race-num {
+      font-size: 32px; font-weight: 900; color: #ffe066; margin-bottom: 12px;
+      text-shadow: 0 0 12px #aa7700;
+    }
+    #screenCond .cond-track {
+      font-size: 26px; font-weight: 700; margin-bottom: 8px; color: #fff;
+    }
+    #screenCond .cond-weather {
+      font-size: 20px; color: #aac; margin-bottom: 28px;
+    }
+
+    /* ===== ENTRIES SCREEN ===== */
+    #screenEntries {
+      background: #0d0d20;
+      padding: 0;
+      overflow: hidden;
+    }
+    #screenEntries .entries-header {
+      flex-shrink: 0;
+      padding: 14px 14px 10px;
+      background: #111128;
+      border-bottom: 1px solid #2a2a50;
+      width: 100%;
+    }
+    #screenEntries .entries-header h2 {
+      font-size: 18px; font-weight: 700; margin-bottom: 4px;
+    }
+    #screenEntries .entries-header .cond-line {
+      font-size: 12px; color: #888;
+    }
+    #screenEntries .entries-header .pick-status {
+      font-size: 13px; color: #ffe066; margin-top: 4px; font-weight: 700;
+    }
+    #entriesList {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      width: 100%; padding: 8px 10px 80px;
+    }
+    .entry-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 0; border-bottom: 1px solid #1e1e38;
+      cursor: pointer;
+    }
+    .entry-row:active { background: rgba(255,255,255,0.05); }
+    .frame-chip {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900; flex-shrink: 0;
+    }
+    .entry-num { font-size: 14px; font-weight: 700; width: 22px; flex-shrink: 0; color: #fff; }
+    .entry-main { flex: 1; min-width: 0; }
+    .entry-name { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-meta { font-size: 11px; color: #888; margin-top: 1px; }
+    .entry-stats { font-size: 11px; color: #66aacc; margin-top: 2px; }
+    .going-fit-mark { font-size: 13px; font-weight: 700; width: 20px; text-align: center; flex-shrink: 0; }
+    .entry-check {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 2px solid #446; background: #111;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 18px; color: transparent;
+      transition: all 0.12s;
+    }
+    .entry-check.checked {
+      background: #44aaff; border-color: #44aaff; color: #fff;
+    }
+    #entriesApplyBar {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background: linear-gradient(0deg, #0d0d20 70%, transparent);
+      padding: 12px 16px 16px;
+      display: flex; justify-content: center;
+      z-index: 55;
+    }
+    #btnApply {
+      font-size: 17px; padding: 13px 32px; border-radius: 30px;
+      background: #555; color: #aaa;
+      border: none; font-weight: 700; cursor: pointer;
+      touch-action: manipulation; min-height: 48px; min-width: 200px;
+      transition: background 0.2s, color 0.2s;
+    }
+    #btnApply.active { background: #44aaff; color: #fff; }
+
+    /* ===== HORSE DETAIL MODAL ===== */
+    #horseDetailModal .stat-line {
+      display: flex; justify-content: space-between; margin-bottom: 8px;
+    }
+    #horseDetailModal .stat-label { font-size: 12px; color: #888; }
+    #horseDetailModal .stat-val { font-size: 13px; font-weight: 700; color: #fff; }
+
+    /* ===== LOTTERY SCREEN ===== */
+    #screenLottery {
+      background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
+      justify-content: center; padding: 20px;
+    }
+    #screenLottery .lottery-label {
+      font-size: 14px; color: #aaa; margin-bottom: 16px; letter-spacing: 1px;
+    }
+    #lotteryReel {
+      font-size: 22px; font-weight: 900; color: #ffe066;
+      min-height: 36px; margin-bottom: 24px;
+      text-shadow: 0 0 10px #aa7700;
+      text-align: center;
+    }
+    #lotteryReveal { display: none; width: 100%; max-width: 340px; }
+    #lotteryReveal .reveal-label {
+      font-size: 14px; color: #aaa; text-align: center; margin-bottom: 8px;
+    }
+    #lotteryReveal .reveal-horse {
+      font-size: 26px; font-weight: 900; color: #fff; text-align: center; margin-bottom: 16px;
+      text-shadow: 0 0 12px #44aaff;
+    }
+    .spec-card {
+      background: rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;
+      margin-bottom: 16px; width: 100%; max-width: 340px;
+    }
+    .spec-card .spec-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .spec-card .spec-row:last-child { border-bottom: none; }
+    .spec-card .spec-key { font-size: 12px; color: #888; }
+    .spec-card .spec-val { font-size: 13px; font-weight: 700; color: #eee; }
+    .hint-box {
+      background: rgba(68,170,255,0.1); border: 1px solid rgba(68,170,255,0.3);
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+      font-size: 13px; color: #88ccff; line-height: 1.6;
+      max-width: 340px; width: 100%;
+    }
+
+    /* ===== GATE SCREEN ===== */
+    #screenGate {
+      background: rgba(0,0,0,0.4);
+      justify-content: flex-end; padding-bottom: 80px;
+      pointer-events: auto;
+    }
+    #gateOverlayContent {
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: auto;
+    }
+    #gateStatus {
+      font-size: 22px; font-weight: 900; color: #fff;
+      text-shadow: 0 2px 8px #000; margin-bottom: 16px; text-align: center;
+    }
+    #gateSignal {
+      font-size: 48px; font-weight: 900;
+      display: none; margin-bottom: 16px;
+      animation: pulse 0.3s ease-out;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1.6); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    #gateFeedback {
+      font-size: 18px; font-weight: 700; margin-bottom: 8px;
+      text-shadow: 0 2px 8px #000; min-height: 28px;
+      text-align: center;
+    }
+    #gateTapHint {
+      font-size: 14px; color: rgba(255,255,255,0.7);
+      display: none; text-align: center;
+    }
+
+    /* ===== RESULT SCREEN ===== */
+    #screenResult {
+      background: rgba(0,0,0,0.85);
+      justify-content: flex-start; padding: 20px 16px 16px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    #screenResult h2 { font-size: 26px; margin-bottom: 8px; font-weight: 900; }
+    #resultRank  { font-size: 52px; font-weight: 900; margin-bottom: 6px; }
+    #resultHorse { font-size: 17px; color: #aaa; margin-bottom: 4px; }
+    #resultTime  { font-size: 15px; margin-bottom: 4px; }
+    #resultScore { font-size: 21px; color: #ffe066; font-weight: 700; margin-bottom: 16px; }
+    #finishOrderList {
+      width: 100%; max-width: 360px; margin-bottom: 20px;
+    }
+    .finish-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: 8px; margin-bottom: 4px;
+    }
+    .finish-row.player-row { background: rgba(68,170,255,0.18); }
+    .finish-rank { font-size: 13px; font-weight: 700; width: 24px; color: #aaa; }
+    .finish-name { font-size: 14px; font-weight: 700; color: #eee; }
+    #resultBtns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   </style>
 </head>
 <body>
@@ -66,35 +346,109 @@
   </div>
 
   <!-- ==== UI-SCREENS ==== -->
-  <!-- Title screen -->
-  <div id="screenTitle" style="
-    position:fixed; inset:0; background:linear-gradient(180deg,#0a0a2e,#1a1a4e);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    z-index:50; font-family:system-ui,sans-serif; color:#fff;">
-    <h1 style="font-size:52px; font-weight:900; letter-spacing:4px; margin:0 0 8px;
-      text-shadow:0 0 20px #44aaff;">ジョーバ</h1>
-    <p style="font-size:14px; color:#aaa; margin:0 0 40px;">騎手視点3D競馬ゲーム</p>
-    <button id="btnStart" style="
-      font-size:20px; padding:14px 48px; border-radius:40px;
-      background:#44aaff; color:#fff; border:none; font-weight:700;
-      touch-action:manipulation; cursor:pointer;">レース開始</button>
-    <p style="font-size:12px; color:#666; margin-top:16px;">横持ち推奨</p>
+
+  <!-- ---- Title screen ---- -->
+  <div id="screenTitle" class="screen-overlay" style="display:flex;">
+    <h1>ジョーバ</h1>
+    <p class="subtitle">騎手視点3D競馬ゲーム</p>
+    <div class="title-btns">
+      <button id="btnStart" class="btn-primary">レース開始</button>
+      <button id="btnRules" class="btn-secondary">ルール説明</button>
+    </div>
+    <div class="sub-links">
+      <button id="btnShare">ゲームをシェア</button>
+      <a href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
+    </div>
+    <p class="tip">横持ち推奨</p>
   </div>
 
-  <!-- Finish/result overlay -->
-  <div id="screenResult" style="
-    position:fixed; inset:0; background:rgba(0,0,0,0.75);
-    display:none; flex-direction:column; align-items:center; justify-content:center;
-    z-index:50; font-family:system-ui,sans-serif; color:#fff;">
-    <h2 style="font-size:28px; margin:0 0 12px;">レース終了！</h2>
-    <div id="resultRank"  style="font-size:48px; font-weight:900; margin-bottom:8px;"></div>
-    <div id="resultHorse" style="font-size:18px; color:#aaa; margin-bottom:4px;"></div>
-    <div id="resultTime"  style="font-size:16px; margin-bottom:4px;"></div>
-    <div id="resultScore" style="font-size:22px; color:#ffe066; font-weight:700; margin-bottom:24px;"></div>
-    <button id="btnRetry" style="
-      font-size:18px; padding:12px 40px; border-radius:30px;
-      background:#44aaff; color:#fff; border:none; font-weight:700;
-      touch-action:manipulation; cursor:pointer;">もう一度</button>
+  <!-- ---- Rules modal ---- -->
+  <div id="rulesModal" class="modal-backdrop">
+    <div class="modal-box">
+      <h3>ルール・操作説明</h3>
+      <p><strong>目標：</strong>12頭のレースで1着を目指しましょう。</p>
+      <ul>
+        <li><strong>右下ボタン▲（仕掛ける）</strong>：スピードを上げます。スタミナ消費が増えます。</li>
+        <li><strong>左下ボタン▼（抑える）</strong>：ペースを落とし、スタミナを温存します。掛かり時に長押しで解消できます。</li>
+        <li><strong>左右スワイプ・端タップ</strong>：進路を変更します。ブロックされた際に使いましょう。</li>
+      </ul>
+      <p><strong>脚質：</strong></p>
+      <ul>
+        <li>逃げ（ハナ狙い）/ 先行（好位）/ 差し（中団から）/ 追込（最後方から）</li>
+        <li>脚質に合った乗り方でスタミナを最大限に活かすのがコツです。</li>
+      </ul>
+      <p><strong>掛かり（⚡）：</strong>気性難の馬は序盤にペースが上がりすぎると掛かることがあります。▼ボタンを長押しして解消しましょう。</p>
+      <p><strong>スタミナ温存：</strong>残スタミナが多いほど直線での末脚が伸びます。道中の無駄な消耗を避けることが勝利の鍵です。</p>
+      <button class="modal-close" id="btnRulesClose">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ---- Cond screen ---- -->
+  <div id="screenCond" class="screen-overlay">
+    <p class="cond-header">レース条件発表</p>
+    <div id="condRaceNum" class="cond-race-num"></div>
+    <div id="condTrack" class="cond-track"></div>
+    <div id="condWeather" class="cond-weather"></div>
+    <button id="btnGoEntries" class="btn-primary">出走表へ</button>
+  </div>
+
+  <!-- ---- Entries screen ---- -->
+  <div id="screenEntries" class="screen-overlay">
+    <div class="entries-header">
+      <h2>出走表</h2>
+      <div id="entriesCondLine" class="cond-line"></div>
+      <div id="entriesPickStatus" class="pick-status">希望馬を3頭選んでください</div>
+    </div>
+    <div id="entriesList"></div>
+    <div id="entriesApplyBar">
+      <button id="btnApply">希望を申請する（0/3）</button>
+    </div>
+  </div>
+
+  <!-- ---- Horse detail modal ---- -->
+  <div id="horseDetailModal" class="modal-backdrop">
+    <div class="modal-box">
+      <h3 id="horseDetailTitle"></h3>
+      <div id="horseDetailContent"></div>
+      <button class="modal-close" id="btnHorseDetailClose">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ---- Lottery screen ---- -->
+  <div id="screenLottery" class="screen-overlay">
+    <div class="lottery-label">騎乗馬抽選中...</div>
+    <div id="lotteryReel"></div>
+    <div id="lotteryReveal">
+      <div class="reveal-label">あなたの騎乗馬は</div>
+      <div id="revealHorseName" class="reveal-horse"></div>
+      <div id="lotterySpecCard" class="spec-card"></div>
+      <div id="lotteryHint" class="hint-box"></div>
+      <button id="btnGoGate" class="btn-primary" style="align-self:center;">ゲートへ</button>
+    </div>
+  </div>
+
+  <!-- ---- Gate screen ---- -->
+  <div id="screenGate" class="screen-overlay">
+    <div id="gateOverlayContent">
+      <div id="gateStatus">各馬ゲートイン...</div>
+      <div id="gateSignal">スタート！</div>
+      <div id="gateFeedback"></div>
+      <div id="gateTapHint">タイミングよくタップ！</div>
+    </div>
+  </div>
+
+  <!-- ---- Result/finish screen ---- -->
+  <div id="screenResult" class="screen-overlay" style="align-items:center;">
+    <h2>レース終了！</h2>
+    <div id="resultRank"></div>
+    <div id="resultHorse"></div>
+    <div id="resultTime"></div>
+    <div id="resultScore"></div>
+    <div id="finishOrderList"></div>
+    <div id="resultBtns">
+      <button id="btnRetry" class="btn-primary">もう一度走る</button>
+      <button id="btnToTitle" class="btn-secondary">タイトルへ</button>
+    </div>
   </div>
 
   <script type="importmap">
@@ -188,6 +542,28 @@
     SUPABASE_KEY: '',
     GAME_SLUG: 'johba',
     CLIENT_VERSION: 'v0.1',
+
+    // Frame colors (JRA 枠番1-8)
+    FRAME_COLORS: [
+      0xffffff, // 1 白
+      0x222222, // 2 黒
+      0xd32f2f, // 3 赤
+      0x1565c0, // 4 青
+      0xf9d216, // 5 黄
+      0x2e7d32, // 6 緑
+      0xef6c00, // 7 橙
+      0xf06292, // 8 桃
+    ],
+
+    // Coat colors (馬体色)
+    COAT_COLORS: [
+      0x6b4226, // 鹿毛
+      0x4a2f1d, // 黒鹿毛
+      0x8b5a2b, // 栗毛
+      0xa8a8b0, // 芦毛
+      0x2b2b30, // 青毛
+      0x96612e, // 栃栗毛
+    ],
   };
   // ==== CONFIG-END ====
 
@@ -197,16 +573,35 @@
   // ブラウザ依存を一切書かない（tools/sim-harness.mjs が node で抽出実行する）。
 
   // ── SECTION: HORSE-NAMES（SIM-CORE 内・純粋関数のため generateField から参照可能にする）──
-  function generateHorseName(rng, idx) {
-    const prefixes = ['サクラ','ディープ','ゴールド','シルバー','ブラック','ホワイト',
-      'スター','グラン','ブルー','ロイヤル','ワイルド','ネオ','メガ','ライジング','ソルティ'];
-    const suffixes = ['インパクト','フラッシュ','ライン','ウェーブ','ドリーム','ランナー',
-      'ブレイズ','ストーム','リバー','フォース','シャイン','パッション','アロー','ウィンド',
-      'バーニング','エクスプレス','ファントム','サンダー'];
-    const p = prefixes[Math.floor(rng() * prefixes.length)];
-    const s = suffixes[Math.floor(rng() * suffixes.length)];
-    const full = p + s;
-    return full.length > 9 ? full.slice(0, 9) : full;
+  function generateHorseName(rng, usedNames) {
+    const prefixes = [
+      'サクラ','トウカイ','メジロ','ナリタ','シルク','ゴールド','ダイワ','アドマイヤ',
+      'エア','マチカネ','フジ','キング','スイープ','テイエム','カフェ','シンボリ',
+      'ハル','ミホノ','タマモ','ライス','ユキノ','サニー',
+    ];
+    const suffixes = [
+      'ブライアン','テイオー','スズカ','シャトル','クロス','ダンス','オペラ',
+      'ウィーク','グルーヴ','ボーイ','パレード','ティアラ','ロマン','ブルボン',
+      'シチー','ライデン','ヘイロー','ストーン',
+    ];
+    // Deterministic loop: try combinations until we find a unique name ≤9 chars
+    const totalCombinations = prefixes.length * suffixes.length;
+    let offset = Math.floor(rng() * totalCombinations);
+    for (let attempt = 0; attempt < totalCombinations; attempt++) {
+      const idx = (offset + attempt) % totalCombinations;
+      const p = prefixes[idx % prefixes.length];
+      const s = suffixes[Math.floor(idx / prefixes.length) % suffixes.length];
+      const full = p + s;
+      if (full.length <= 9 && !usedNames.has(full)) {
+        usedNames.add(full);
+        return full;
+      }
+    }
+    // Fallback: use a pair that is guaranteed unique by appending a counter-based suffix
+    // (should never reach here with 22×18=396 combinations for 12 horses)
+    const fallback = prefixes[Math.floor(rng() * prefixes.length)] + 'スター';
+    usedNames.add(fallback);
+    return fallback;
   }
 
   // ── makeRng: Mulberry32 ──
@@ -265,12 +660,26 @@
       [stylePool[i], stylePool[j]] = [stylePool[j], stylePool[i]];
     }
 
+    const usedNames = new Set();
     const horses = [];
     for (let i = 0; i < 12; i++) {
+      // JRA 枠番マッピング: 1→1, 2→2, ... , 5・6→5, 7・8→6, 9・10→7, 11・12→8
+      const num = i + 1;
+      let frame;
+      if (num <= 4) frame = num;
+      else if (num <= 6) frame = 5;
+      else if (num <= 8) frame = 6;
+      else if (num <= 10) frame = 7;
+      else frame = 8;
+
+      const silks = CONFIG.FRAME_COLORS[frame - 1];
+      const coatIdx = Math.floor(rng() * CONFIG.COAT_COLORS.length);
+      const coat = CONFIG.COAT_COLORS[coatIdx];
+
       const randStat = () => Math.floor(rng() * 51) + 40; // 40-90
       horses.push({
-        num: i + 1,
-        name: generateHorseName(rng, i),
+        num,
+        name: generateHorseName(rng, usedNames),
         style: stylePool[i],
         speed: randStat(),
         stamina: randStat(),
@@ -281,7 +690,10 @@
         temperament: Math.floor(rng() * 51) + 30, // 30-80
         gate: Math.floor(rng() * 101),
         condition: Math.floor(rng() * 51) + 50, // 50-100
-        color: (i / 12) * 0xFFFFFF | 0, // placeholder; set properly below
+        color: coat, // backward compat: color = coat
+        coat,
+        silks,
+        frame,
         isPlayer: i === 0,
       });
     }
@@ -299,17 +711,6 @@
         h.power  = Math.min(99, Math.max(10, Math.round(h.power  * scale)));
       });
     }
-
-    // Assign 12 distinct hue-based colors for jockey silks (as 0xRRGGBB)
-    horses.forEach((h, i) => {
-      const hue = i / 12;
-      // HSL to RGB
-      const f = (n) => {
-        const k = (n + hue * 12) % 12;
-        return 0.5 - 0.5 * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-      };
-      h.color = (Math.round(f(0) * 255) << 16) | (Math.round(f(8) * 255) << 8) | Math.round(f(4) * 255);
-    });
 
     return horses;
   }
@@ -976,13 +1377,16 @@
   let accumulator = 0;
   const SIM_DT = 1 / 60;
 
+  // Phase flag: 'idle' | 'gate' | 'running'
+  let racePhase = 'idle';
+
   function gameLoop(now) {
     requestAnimationFrame(gameLoop);
 
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
 
-    if (raceState && !shownResults) {
+    if (raceState && racePhase === 'running' && !shownResults) {
       accumulator += dt;
       accumulator = Math.min(accumulator, 0.1);
       while (accumulator >= SIM_DT) {
@@ -998,6 +1402,10 @@
         shownResults = true;
         showFinishScreen(raceState);
       }
+    } else if (raceState && racePhase === 'gate') {
+      // Still render / update camera while in gate screen
+      updateHorseMeshes(raceState, frameCount);
+      updateCamera(raceState);
     }
 
     renderer.render(scene, camera);
@@ -1098,37 +1506,487 @@
   setupInput();
 
   // ==== SECTION: UI-SCREENS ====
-  function startRace() {
-    // Generate race
-    const rng = makeRng(Date.now() & 0xFFFFFFFF);
-    const cond = createRaceConditions(rng);
-    const field = generateField(rng, cond);
+
+  // ── Shared helpers ──
+
+  // Convert hex int to CSS hex string
+  function hexColor(n) {
+    return '#' + n.toString(16).padStart(6, '0');
+  }
+
+  // Frame chip: bright/dark text depending on frame color
+  function frameTextColor(frameIdx) {
+    // White (0) and Yellow (4) get black text; others get white
+    return (frameIdx === 0 || frameIdx === 4) ? '#111' : '#fff';
+  }
+
+  // Stat grade label
+  function statGrade(v) {
+    if (v >= 85) return 'S';
+    if (v >= 70) return 'A';
+    if (v >= 55) return 'B';
+    if (v >= 40) return 'C';
+    return 'D';
+  }
+
+  // Style label
+  function styleLabel(s) {
+    return { nige: '逃げ', senko: '先行', sashi: '差し', oikomi: '追込' }[s] ?? s;
+  }
+
+  // DistFit label
+  function distFitLabel(v) {
+    return ['短距離', 'マイル', '中距離', '長距離'][v] ?? '?';
+  }
+
+  // GoingFit mark
+  function goingFitMark(v) {
+    return ['✕', '△', '○', '◎'][v] ?? '?';
+  }
+
+  // Show/hide screens
+  function showScreen(id) {
+    const ids = ['screenTitle', 'screenCond', 'screenEntries', 'screenLottery', 'screenGate', 'screenResult'];
+    ids.forEach(sid => {
+      const el = document.getElementById(sid);
+      el.style.display = (sid === id) ? 'flex' : 'none';
+    });
+  }
+
+  // ── Module-level state ──
+  let gameRng = null;
+  let pending = { cond: null, field: null };
+  let pickedIndices = []; // indices into field for the 3 wished horses
+  let playerIdx = 0;
+
+  // ── Title screen ──
+  document.getElementById('btnStart').addEventListener('click', () => {
+    goToCondScreen();
+  });
+
+  document.getElementById('btnRules').addEventListener('click', () => {
+    document.getElementById('rulesModal').style.display = 'flex';
+  });
+  document.getElementById('btnRulesClose').addEventListener('click', () => {
+    document.getElementById('rulesModal').style.display = 'none';
+  });
+
+  document.getElementById('btnShare').addEventListener('click', async () => {
+    const shareData = { title: 'ジョーバ', url: location.href };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(location.href);
+        const btn = document.getElementById('btnShare');
+        const orig = btn.textContent;
+        btn.textContent = 'コピーしました';
+        setTimeout(() => { btn.textContent = orig; }, 1800);
+      }
+    } catch (_) {}
+  });
+
+  // ── Cond screen ──
+  function goToCondScreen() {
+    gameRng = makeRng(Date.now() & 0xffffffff);
+    const cond = createRaceConditions(gameRng);
+    const field = generateField(gameRng, cond);
+    pending = { cond, field };
+    pickedIndices = [];
+
+    // Random race number 1–12
+    const raceNum = Math.floor(gameRng() * 12) + 1;
+
+    // Distance label with turn direction (always left)
+    const distLabel = `芝 ${cond.distance}m（左回り）`;
+
+    document.getElementById('condRaceNum').textContent = `第${raceNum}レース`;
+    document.getElementById('condTrack').textContent = distLabel;
+    document.getElementById('condWeather').textContent =
+      `天気：${cond.weather} / 馬場：${cond.going}`;
+
+    showScreen('screenCond');
+  }
+
+  document.getElementById('btnGoEntries').addEventListener('click', () => {
+    buildEntriesScreen();
+    showScreen('screenEntries');
+  });
+
+  // ── Entries screen ──
+  function buildEntriesScreen() {
+    const { cond, field } = pending;
+    pickedIndices = [];
+
+    document.getElementById('entriesCondLine').textContent =
+      `${cond.distance}m ${cond.going} / 天気：${cond.weather}`;
+    document.getElementById('entriesPickStatus').textContent =
+      '希望馬を3頭選んでください';
+    document.getElementById('btnApply').textContent = '希望を申請する（0/3）';
+    document.getElementById('btnApply').classList.remove('active');
+
+    const list = document.getElementById('entriesList');
+    list.innerHTML = '';
+
+    field.forEach((h, idx) => {
+      const row = document.createElement('div');
+      row.className = 'entry-row';
+
+      const frameColor = hexColor(CONFIG.FRAME_COLORS[h.frame - 1]);
+      const textColor = frameTextColor(h.frame - 1);
+
+      row.innerHTML = `
+        <div class="frame-chip" style="background:${frameColor};color:${textColor};">${h.frame}</div>
+        <div class="entry-num">${h.num}</div>
+        <div class="entry-main">
+          <div class="entry-name">${h.name}</div>
+          <div class="entry-meta">${styleLabel(h.style)} / 距離:${distFitLabel(h.distFit)}</div>
+          <div class="entry-stats">スピ${statGrade(h.speed)} スタ${statGrade(h.stamina)} 瞬発${statGrade(h.burst)} パワ${statGrade(h.power)}</div>
+        </div>
+        <div class="going-fit-mark">${goingFitMark(h.goingFit)}</div>
+        <div class="entry-check" id="check_${idx}">✓</div>
+      `;
+
+      // Row tap → detail modal (tapping the check area directly toggles the pick)
+      const checkEl = row.querySelector(`#check_${idx}`);
+      checkEl.addEventListener('click', e => {
+        e.stopPropagation();
+        togglePick(idx);
+      });
+      // Tap row body → detail modal
+      const mainEl = row.querySelector('.entry-main');
+      mainEl.addEventListener('click', e => {
+        e.stopPropagation();
+        showHorseDetail(h, false);
+      });
+
+      list.appendChild(row);
+    });
+  }
+
+  function togglePick(idx) {
+    const alreadyPicked = pickedIndices.includes(idx);
+    if (alreadyPicked) {
+      pickedIndices = pickedIndices.filter(i => i !== idx);
+    } else {
+      if (pickedIndices.length >= 3) return; // max 3
+      pickedIndices.push(idx);
+    }
+    updatePickUI();
+  }
+
+  function updatePickUI() {
+    const n = pickedIndices.length;
+    // Update check visuals
+    pending.field.forEach((_, idx) => {
+      const checkEl = document.getElementById(`check_${idx}`);
+      if (checkEl) {
+        checkEl.classList.toggle('checked', pickedIndices.includes(idx));
+      }
+    });
+    // Update status text
+    document.getElementById('entriesPickStatus').textContent =
+      n < 3 ? `希望馬を3頭選んでください（${n}/3）` : '申請できます（3/3）';
+    // Apply button
+    const btn = document.getElementById('btnApply');
+    btn.textContent = `希望を申請する（${n}/3）`;
+    btn.classList.toggle('active', n === 3);
+  }
+
+  document.getElementById('btnApply').addEventListener('click', () => {
+    if (pickedIndices.length !== 3) return;
+    startLottery();
+  });
+
+  // ── Horse detail modal ──
+  function showHorseDetail(h, showSecret) {
+    document.getElementById('horseDetailTitle').textContent =
+      `${h.num}番 ${h.name}`;
+
+    const fc = hexColor(CONFIG.FRAME_COLORS[h.frame - 1]);
+    const tc = frameTextColor(h.frame - 1);
+
+    let html = `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <div class="frame-chip" style="background:${fc};color:${tc};">${h.frame}</div>
+        <span style="font-size:14px; color:#aaa;">${styleLabel(h.style)} / 距離:${distFitLabel(h.distFit)}</span>
+      </div>
+      <div class="stat-line"><span class="stat-label">スピード</span><span class="stat-val">${h.speed}（${statGrade(h.speed)}）</span></div>
+      <div class="stat-line"><span class="stat-label">スタミナ</span><span class="stat-val">${h.stamina}（${statGrade(h.stamina)}）</span></div>
+      <div class="stat-line"><span class="stat-label">瞬発力</span><span class="stat-val">${h.burst}（${statGrade(h.burst)}）</span></div>
+      <div class="stat-line"><span class="stat-label">パワー</span><span class="stat-val">${h.power}（${statGrade(h.power)}）</span></div>
+      <div class="stat-line"><span class="stat-label">馬場適性</span><span class="stat-val">${goingFitMark(h.goingFit)}</span></div>
+    `;
+
+    if (showSecret) {
+      const tempLabel = h.temperament >= 70 ? 'おとなしい' : h.temperament >= 45 ? 'ふつう' : '気性難';
+      const condLabel = h.condition >= 90 ? '絶好調' : h.condition >= 70 ? '好調' : h.condition >= 45 ? '普通' : h.condition >= 25 ? '不調' : '絶不調';
+      const gateLabel = h.gate >= 70 ? '上手' : h.gate >= 40 ? 'ふつう' : '下手';
+      html += `
+        <div style="border-top:1px solid #333; margin: 10px 0;"></div>
+        <div class="stat-line"><span class="stat-label">気性</span><span class="stat-val">${tempLabel}</span></div>
+        <div class="stat-line"><span class="stat-label">当日の調子</span><span class="stat-val">${condLabel}</span></div>
+        <div class="stat-line"><span class="stat-label">ゲート</span><span class="stat-val">${gateLabel}</span></div>
+      `;
+    }
+
+    document.getElementById('horseDetailContent').innerHTML = html;
+    document.getElementById('horseDetailModal').style.display = 'flex';
+  }
+
+  document.getElementById('btnHorseDetailClose').addEventListener('click', () => {
+    document.getElementById('horseDetailModal').style.display = 'none';
+  });
+
+  // ── Lottery screen ──
+  let lotteryTimer = null;
+
+  function startLottery() {
+    showScreen('screenLottery');
+    document.getElementById('lotteryReveal').style.display = 'none';
+    document.getElementById('lotteryReel').textContent = '';
+
+    const pickedHorses = pickedIndices.map(i => pending.field[i]);
+
+    // Lottery: pick uniformly from the 3 picked (using gameRng for determinism)
+    const winnerLocalIdx = Math.floor(gameRng() * 3);
+    const winnerFieldIdx = pickedIndices[winnerLocalIdx];
+    playerIdx = winnerFieldIdx;
+
+    // Cycling animation: show names rapidly, slow down over ~2.5s
+    let elapsed = 0;
+    const totalTime = 2500; // ms
+    let frameIdx = 0;
+    let lastSwitch = 0;
+
+    function tick(now) {
+      if (!lotteryRunning) return;
+
+      const progress = Math.min(elapsed / totalTime, 1);
+      // Interval starts at 80ms, grows to 400ms
+      const interval = 80 + progress * 320;
+
+      if (now - lastSwitch >= interval) {
+        const name = pickedHorses[frameIdx % pickedHorses.length].name;
+        document.getElementById('lotteryReel').textContent = name;
+        frameIdx++;
+        lastSwitch = now;
+      }
+
+      elapsed += 16;
+
+      if (elapsed < totalTime) {
+        lotteryTimer = requestAnimationFrame(tick);
+      } else {
+        // Settle on winner
+        const winner = pending.field[playerIdx];
+        document.getElementById('lotteryReel').textContent = winner.name;
+        setTimeout(() => showLotteryReveal(winner), 400);
+      }
+    }
+
+    let lotteryRunning = true;
+    lotteryTimer = requestAnimationFrame(tick);
+  }
+
+  function showLotteryReveal(winner) {
+    const tempLabel = winner.temperament >= 70 ? 'おとなしい' : winner.temperament >= 45 ? 'ふつう' : '気性難';
+    const condLabel = winner.condition >= 90 ? '絶好調' : winner.condition >= 70 ? '好調' : winner.condition >= 45 ? '普通' : winner.condition >= 25 ? '不調' : '絶不調';
+    const gateLabel = winner.gate >= 70 ? '上手' : winner.gate >= 40 ? 'ふつう' : '下手';
+    const hintMap = {
+      nige:   '「ハナを取って粘り込もう」',
+      senko:  '「好位で脚を溜めて直線で抜け出そう」',
+      sashi:  '「中団で我慢して残り700mから仕掛けよう」',
+      oikomi: '「最後方で溜めて直線一気！」',
+    };
+
+    document.getElementById('revealHorseName').textContent =
+      `${winner.num}番 ${winner.name}`;
+
+    const fc = hexColor(CONFIG.FRAME_COLORS[winner.frame - 1]);
+    const tc = frameTextColor(winner.frame - 1);
+
+    document.getElementById('lotterySpecCard').innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <div class="frame-chip" style="background:${fc};color:${tc};">${winner.frame}</div>
+        <span style="font-size:13px; color:#aaa;">${styleLabel(winner.style)} / 距離:${distFitLabel(winner.distFit)}</span>
+      </div>
+      <div class="spec-row"><span class="spec-key">スピード</span><span class="spec-val">${winner.speed}（${statGrade(winner.speed)}）</span></div>
+      <div class="spec-row"><span class="spec-key">スタミナ</span><span class="spec-val">${winner.stamina}（${statGrade(winner.stamina)}）</span></div>
+      <div class="spec-row"><span class="spec-key">瞬発力</span><span class="spec-val">${winner.burst}（${statGrade(winner.burst)}）</span></div>
+      <div class="spec-row"><span class="spec-key">パワー</span><span class="spec-val">${winner.power}（${statGrade(winner.power)}）</span></div>
+      <div class="spec-row"><span class="spec-key">馬場適性</span><span class="spec-val">${goingFitMark(winner.goingFit)}</span></div>
+      <div class="spec-row"><span class="spec-key">気性</span><span class="spec-val">${tempLabel}</span></div>
+      <div class="spec-row"><span class="spec-key">当日の調子</span><span class="spec-val">${condLabel}</span></div>
+      <div class="spec-row"><span class="spec-key">ゲート</span><span class="spec-val">${gateLabel}</span></div>
+    `;
+
+    document.getElementById('lotteryHint').textContent =
+      `作戦のヒント：${hintMap[winner.style] ?? ''}`;
+
+    document.getElementById('lotteryReveal').style.display = 'flex';
+    document.getElementById('lotteryReveal').style.flexDirection = 'column';
+    document.getElementById('lotteryReveal').style.alignItems = 'center';
+  }
+
+  document.getElementById('btnGoGate').addEventListener('click', () => {
+    openGateScreen();
+  });
+
+  // ── Gate screen ──
+  let gateSignalTime = null;       // performance.now() when signal fires
+  let gateTapHandled = false;
+  let gateSignalFired = false;
+  let gateSignalTimeout = null;
+  let gateFeedbackTimeout = null;
+
+  function openGateScreen() {
+    const { cond, field } = pending;
 
     // Build/reset horse meshes
     horseMeshes.forEach(m => scene.remove(m));
     horseMeshes = [];
     field.forEach(def => {
-      const m = createHorseModel(def.color, def.color); // use same color for silks for now
+      const m = createHorseModel(def.coat, def.silks);
       scene.add(m);
       horseMeshes.push(m);
     });
 
-    raceState = createRaceState(field, cond, makeRng((Date.now() + 1) & 0xFFFFFFFF), 0);
+    raceState = createRaceState(field, cond, makeRng((Date.now() + 1) & 0xffffffff), playerIdx);
     shownResults = false;
     accumulator = 0;
+    racePhase = 'gate';
 
-    // Place meshes at the gate immediately so frame 1 looks right
+    // Place meshes at gate position
     updateHorseMeshes(raceState, 0);
     updateCamera(raceState);
 
-    document.getElementById('screenTitle').style.display  = 'none';
-    document.getElementById('screenResult').style.display = 'none';
-    document.getElementById('hud').style.display          = 'block';
-    document.getElementById('controls').style.display     = 'block';
-    // controls are display:block but pointer-events handled per button
-    document.getElementById('controls').style.pointerEvents = 'none'; // container transparent
+    // Reset gate UI
+    gateSignalTime = null;
+    gateTapHandled = false;
+    gateSignalFired = false;
+    clearTimeout(gateSignalTimeout);
+    clearTimeout(gateFeedbackTimeout);
+
+    document.getElementById('gateStatus').style.display = 'block';
+    document.getElementById('gateStatus').textContent = '各馬ゲートイン...';
+    document.getElementById('gateSignal').style.display = 'none';
+    document.getElementById('gateSignal').style.color = '#ffe066';
+    document.getElementById('gateFeedback').textContent = '';
+    document.getElementById('gateTapHint').style.display = 'none';
+
+    showScreen('screenGate');
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('controls').style.display = 'none';
+
+    // After 0.8s → show tap hint
+    gateSignalTimeout = setTimeout(() => {
+      document.getElementById('gateStatus').textContent = '';
+      document.getElementById('gateTapHint').style.display = 'block';
+      document.getElementById('gateTapHint').textContent = 'タイミングよくタップ！';
+
+      // After random 1.4–2.5s more → fire signal
+      const signalDelay = 1400 + Math.random() * 1100;
+      gateSignalTimeout = setTimeout(() => {
+        fireGateSignal();
+      }, signalDelay);
+    }, 800);
   }
 
+  function fireGateSignal() {
+    gateSignalFired = true;
+    gateSignalTime = performance.now();
+
+    // Set race as started (all horses launch on signal)
+    raceState.started = true;
+    // Default: player missed (1.2s delay), overwritten by tap
+    raceState.playerStartDelay = 1.2;
+
+    document.getElementById('gateStatus').style.display = 'none';
+    document.getElementById('gateTapHint').style.display = 'none';
+
+    const signalEl = document.getElementById('gateSignal');
+    signalEl.textContent = 'スタート！';
+    signalEl.style.color = '#ff4444';
+    signalEl.style.display = 'block';
+
+    // Auto-proceed after 1.2s if no tap
+    gateSignalTimeout = setTimeout(() => {
+      if (!gateTapHandled) {
+        gateTapHandled = true;
+        raceState.playerStartDelay = 1.2;
+        showGateFeedback('出遅れた...', '#ff6666');
+        proceedToRace();
+      }
+    }, 1200);
+  }
+
+  function handleGateTap() {
+    if (gateTapHandled) return;
+    gateTapHandled = true;
+
+    clearTimeout(gateSignalTimeout);
+
+    let delay, feedback, color;
+
+    if (!gateSignalFired) {
+      // Tapped before signal
+      delay = 0.5;
+      feedback = '出遅れ！（フライング気味）';
+      color = '#ffaa44';
+    } else {
+      const dt = (performance.now() - gateSignalTime) / 1000;
+      if (dt <= 0.12) {
+        delay = 0.05;
+        feedback = '好スタート！';
+        color = '#44ffaa';
+      } else if (dt <= 0.3) {
+        delay = dt;
+        feedback = 'まずまずのスタート';
+        color = '#ffe066';
+      } else {
+        delay = Math.min(dt, 1.2);
+        feedback = '出遅れた...';
+        color = '#ff6666';
+      }
+    }
+
+    raceState.playerStartDelay = delay;
+    showGateFeedback(feedback, color);
+    proceedToRace();
+  }
+
+  function showGateFeedback(text, color) {
+    const el = document.getElementById('gateFeedback');
+    el.textContent = text;
+    el.style.color = color;
+    clearTimeout(gateFeedbackTimeout);
+    gateFeedbackTimeout = setTimeout(() => {
+      el.textContent = '';
+    }, 1000);
+  }
+
+  function proceedToRace() {
+    // Short delay so feedback is visible, then hide overlay and start race
+    setTimeout(() => {
+      showScreen(null); // no overlay
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('controls').style.display = 'block';
+      racePhase = 'running';
+    }, 600);
+  }
+
+  // Gate screen tap handling
+  const gateOverlay = document.getElementById('screenGate');
+  gateOverlay.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    handleGateTap();
+  });
+  gateOverlay.addEventListener('touchstart', e => {
+    e.preventDefault();
+  }, { passive: false });
+
+  // ── Finish/result screen ──
   function showFinishScreen(state) {
     const playerResult = state.results.find(r => r.index === state.playerIndex);
     const rank = playerResult?.rank ?? state.finishedCount;
@@ -1146,15 +2004,64 @@
 
     document.getElementById('resultRank' ).textContent = rankLabels[rank] ?? `${rank}着`;
     document.getElementById('resultHorse').textContent = `${h.num}番 ${h.name}`;
-    document.getElementById('resultTime' ).textContent = `走破タイム: ${time.toFixed(1)}s`;
-    document.getElementById('resultScore').textContent = `スコア: ${score}点（着順${rankPts} + タイム${timeBonus}）`;
-    document.getElementById('screenResult').style.display = 'flex';
+    document.getElementById('resultTime' ).textContent = `走破タイム：${time.toFixed(1)}s`;
+    document.getElementById('resultScore').textContent = `スコア：${score}点（着順${rankPts} + タイム${timeBonus}）`;
+
+    // Full finish order list
+    const listEl = document.getElementById('finishOrderList');
+    listEl.innerHTML = '';
+    state.results.forEach(res => {
+      const def = state.field[res.index];
+      const isPlayer = res.index === state.playerIndex;
+      const fc = hexColor(CONFIG.FRAME_COLORS[def.frame - 1]);
+      const tc = frameTextColor(def.frame - 1);
+      const row = document.createElement('div');
+      row.className = 'finish-row' + (isPlayer ? ' player-row' : '');
+      row.innerHTML = `
+        <span class="finish-rank">${res.rank}着</span>
+        <div class="frame-chip" style="background:${fc};color:${tc};width:24px;height:24px;font-size:11px;">${def.frame}</div>
+        <span style="font-size:13px; color:#aaa; width:22px;">${def.num}</span>
+        <span class="finish-name">${def.name}${isPlayer ? '（あなた）' : ''}</span>
+      `;
+      listEl.appendChild(row);
+    });
+
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
+    showScreen('screenResult');
   }
 
-  document.getElementById('btnStart').addEventListener('click', () => { startRace(); });
-  document.getElementById('btnRetry').addEventListener('click', () => { startRace(); });
+  document.getElementById('btnRetry').addEventListener('click', () => {
+    resetAll();
+    goToCondScreen();
+  });
+
+  document.getElementById('btnToTitle').addEventListener('click', () => {
+    resetAll();
+    showScreen('screenTitle');
+  });
+
+  function resetAll() {
+    // Remove all horse meshes
+    horseMeshes.forEach(m => scene.remove(m));
+    horseMeshes = [];
+    raceState = null;
+    shownResults = false;
+    accumulator = 0;
+    racePhase = 'idle';
+    currentInput.accel = false;
+    currentInput.hold = false;
+    currentInput.laneDir = 0;
+    pickedIndices = [];
+    pending = { cond: null, field: null };
+    // Cancel any pending gate timers
+    clearTimeout(gateSignalTimeout);
+    clearTimeout(gateFeedbackTimeout);
+    gateSignalTime = null;
+    gateTapHandled = false;
+    gateSignalFired = false;
+  }
+
   </script>
 </body>
 </html>
