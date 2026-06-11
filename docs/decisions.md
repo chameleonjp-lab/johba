@@ -58,3 +58,12 @@
 - 標準 submit_score RPC を使用するため仕様13章の「着順・距離」は送信しない（共通スキーマ準拠。スコアのみ）
 - 名前未入力時は送信せずランキング閲覧のみ
 - タイムアウト8秒
+
+### 公開前レビュー（モバイルレビューagent指摘の修正）
+
+- iOS Safariのホームインジケーター/ツールバー対策として、下部固定要素（出走表申請バー・掲示板「結果へ」・操作ボタン群・結果画面・リスト下パディング）に env(safe-area-inset-bottom) を適用
+- タイトル/抽選画面に overflow-y を追加し、低い画面（max-height:640px）では justify-content を上詰めへ切替（center+overflowは上端がクリップされるCSSの罠への対応）
+- 低い画面（max-height:600px）では▼▲ボタンを64pxへ縮小しムチを下げ、3D視野を確保（インラインスタイル上書きのため!important使用）
+- HUDの順位表示に nowrap+ellipsis+max-width:58% を追加（320px幅での折返し防止）。シェア/実験場リンクを44px化。tipのコントラストを#555→#888へ改善
+- ランキング表示のstored XSSを修正（display_nameはtextContentで組み立て）
+- console.warn 2件（送信/取得失敗時）は障害解析用として意図的に残置（プレイヤーには非表示）

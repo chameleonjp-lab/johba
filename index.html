@@ -82,6 +82,8 @@
     #screenTitle {
       background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
       justify-content: center;
+      padding: 16px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
     #screenTitle h1 {
       font-size: 52px; font-weight: 900; letter-spacing: 4px; margin: 0 0 8px;
@@ -96,15 +98,15 @@
       font-size: 13px; padding: 6px 14px;
       background: transparent; color: #7ab; border: 1px solid #446;
       border-radius: 20px; cursor: pointer; touch-action: manipulation;
-      min-height: 36px;
+      min-height: 44px;
     }
     #screenTitle .sub-links a {
       font-size: 13px; padding: 6px 14px;
       color: #7ab; border: 1px solid #446;
       border-radius: 20px; text-decoration: none;
-      display: flex; align-items: center; min-height: 36px;
+      display: flex; align-items: center; min-height: 44px;
     }
-    .tip { font-size: 12px; color: #555; margin-top: 10px; }
+    .tip { font-size: 12px; color: #888; margin-top: 10px; }
 
     /* ===== COND SCREEN ===== */
     #screenCond {
@@ -147,7 +149,7 @@
     }
     #entriesList {
       flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-      width: 100%; padding: 8px 10px 80px;
+      width: 100%; padding: 8px 10px calc(80px + env(safe-area-inset-bottom));
     }
     .entry-row {
       display: flex; align-items: center; gap: 8px;
@@ -179,7 +181,7 @@
     #entriesApplyBar {
       position: fixed; bottom: 0; left: 0; width: 100%;
       background: linear-gradient(0deg, #0d0d20 70%, transparent);
-      padding: 12px 16px 16px;
+      padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
       display: flex; justify-content: center;
       z-index: 55;
     }
@@ -203,6 +205,7 @@
     #screenLottery {
       background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
       justify-content: center; padding: 20px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
     #screenLottery .lottery-label {
       font-size: 14px; color: #aaa; margin-bottom: 16px; letter-spacing: 1px;
@@ -275,7 +278,8 @@
     /* ===== RESULT SCREEN ===== */
     #screenResult {
       background: rgba(0,0,0,0.85);
-      justify-content: flex-start; padding: 20px 16px 16px;
+      justify-content: flex-start;
+      padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
       overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
     #screenResult h2 { font-size: 26px; margin-bottom: 8px; font-weight: 900; }
@@ -401,7 +405,7 @@
     }
     #ceremonyRows {
       flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-      width: 100%; padding: 6px 10px 80px;
+      width: 100%; padding: 6px 10px calc(80px + env(safe-area-inset-bottom));
     }
     .cer-row {
       display: flex; align-items: center; gap: 7px;
@@ -417,9 +421,20 @@
     #ceremonyNextBtn {
       position: fixed; bottom: 0; left: 0; width: 100%;
       background: linear-gradient(0deg, rgba(0,0,0,0.95) 70%, transparent);
-      padding: 12px 16px 16px;
+      padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
       display: flex; justify-content: center;
       z-index: 60;
+    }
+
+    /* ===== 低い画面（iPhone SE縦持ち等）への対応 ===== */
+    /* justify-content:center + overflow は上端がクリップされるため上詰めに切り替える */
+    @media (max-height: 640px) {
+      #screenTitle, #screenLottery { justify-content: flex-start; }
+    }
+    /* 操作ボタンを少し小さくして3D視野を確保（インラインスタイル上書きのため !important） */
+    @media (max-height: 600px) {
+      #btnHold, #btnAccel { width: 64px !important; height: 64px !important; font-size: 26px !important; }
+      #btnWhip { bottom: calc(152px + env(safe-area-inset-bottom)) !important; height: 48px !important; }
     }
   </style>
 </head>
@@ -431,7 +446,8 @@
     padding:10px 12px; z-index:10; display:none; font-family:system-ui,sans-serif;">
 
     <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
-      <span id="hudRank" style="color:#fff; font-size:15px; font-weight:700; text-shadow:0 1px 4px #000;"></span>
+      <span id="hudRank" style="color:#fff; font-size:15px; font-weight:700; text-shadow:0 1px 4px #000;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:58%;"></span>
       <span id="hudPace" style="color:#ffe066; font-size:14px; font-weight:700; text-shadow:0 1px 4px #000;"></span>
     </div>
 
@@ -469,19 +485,19 @@
   <!-- ==== CONTROLS ==== -->
   <div id="controls" style="display:none; pointer-events:none; z-index:20; position:fixed; bottom:0; left:0; width:100%;">
     <div id="btnHold" style="
-      position:absolute; bottom:80px; left:20px;
+      position:absolute; bottom:calc(80px + env(safe-area-inset-bottom)); left:20px;
       width:76px; height:76px; border-radius:50%;
       background:rgba(255,255,255,0.22); border:2px solid rgba(255,255,255,0.5);
       display:flex; align-items:center; justify-content:center;
       font-size:30px; pointer-events:auto; touch-action:none; user-select:none;">▼</div>
     <div id="btnAccel" style="
-      position:absolute; bottom:80px; right:20px;
+      position:absolute; bottom:calc(80px + env(safe-area-inset-bottom)); right:20px;
       width:76px; height:76px; border-radius:50%;
       background:rgba(255,255,255,0.22); border:2px solid rgba(255,255,255,0.5);
       display:flex; align-items:center; justify-content:center;
       font-size:30px; pointer-events:auto; touch-action:none; user-select:none;">▲</div>
     <div id="btnWhip" style="
-      position:absolute; bottom:166px; right:20px;
+      position:absolute; bottom:calc(166px + env(safe-area-inset-bottom)); right:20px;
       width:76px; height:56px; border-radius:14px;
       background:rgba(220,60,60,0.32); border:2px solid rgba(255,120,120,0.7);
       display:flex; flex-direction:column; align-items:center; justify-content:center;
