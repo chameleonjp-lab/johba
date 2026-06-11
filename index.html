@@ -116,16 +116,37 @@
     get LAP_LEN() { return 2 * this.STRAIGHT_LEN + 2 * Math.PI * this.INSIDE_RADIUS; },
     get CORNER_LEN() { return Math.PI * this.INSIDE_RADIUS; },
 
+    // ゴール板はコース上の固定位置（ホームストレッチ＝str1の430m地点）。
+    // スタート位置は距離ごとに (GOAL_S - distance) mod LAP_LEN で決まる
+    GOAL_S: 430,
+
     // Physics
     ACCEL_BASE: 3.2,        // m/s²
     CRUISE_RATIO: 0.91,     // cruiseSpeed = maxSpeed * CRUISE_RATIO
     STAMINA_MAX: 1000,
-    DRAIN_ACCEL_K: 1.4,     // extra drain × (v - cruise)² when above cruise
-    RECOVER_RATE: 6,        // stamina/s when below cruise×0.97
+    DRAIN_RACE_FRAC: 0.45,  // 巡航のまま全行程を走った場合に消費するプール割合
+    DRAIN_ACCEL_K: 1.2,     // extra drain × (v - cruise)² when above cruise
+    RECOVER_RATE: 7,        // stamina/s when below cruise×0.97
     BATE_THRESH_1: 0.30,    // stamina fraction → maxSpeed −0.5 m/s
     BATE_THRESH_2: 0.15,    // stamina fraction → maxSpeed −1.2 m/s
-    BATE_SPEED_FLOOR: 0.82, // stamina=0 → speed capped at cruise × this
+    BATE_SPEED_FLOOR: 0.89, // stamina=0 → speed capped at cruise × this
+    SPURT_FRESH_K: 0.8,     // 末脚：残スタミナ割合×この値だけ最高速度が上乗せされる
+    SPURT_FRESH_MAX: 0.5,   // 上乗せの上限 m/s
     CORNER_PENALTY: 0.008,  // speed multiplier loss per outer lane on corners
+    START_NEUTRAL_DIST: 300, // 発走直後この距離はコーナーロスを無効化（コーナー発走の枠順不公平を防ぐ）
+    // 距離によるペース感の補正（長丁場ほど全体に巡航が落ちる）
+    DIST_SPEED_MUL: { 1200: 1.0, 1600: 0.995, 2000: 0.985, 2400: 0.97 },
+
+    // Start (gate)
+    START_DELAY_BASE: 0.05,
+    START_DELAY_GATE: 0.25, // ゲート下手による平均遅延の幅
+    BAD_START_PROB: 0.06,   // ×(100-gate)/100 で大出遅れ確率
+    BAD_START_EXTRA_MIN: 0.4,
+    BAD_START_EXTRA_MAX: 0.7,
+
+    // Pace label (先頭の15%→50%区間平均速度 ÷ 出走馬の巡航平均)
+    PACE_HIGH: 1.031,
+    PACE_SLOW: 1.021,
 
     // Interactions
     SLIP_MUL: 0.85,
@@ -139,10 +160,14 @@
     KAKARI_TEMP_THRESH: 45,
     KAKARI_EXCESS: 0.45,    // m/s above cruise needed
     KAKARI_TIME: 1.2,       // s of excess before trigger
+    KAKARI_PHASE: 0.35,     // レース前半のこの割合までしか発生しない（序盤限定）
+    KAKARI_PROB: 0.5,       // 条件成立中の毎秒発生確率
     KAKARI_TARGET: 1.3,     // excess during kakari
     KAKARI_DRAIN: 1.5,
     KAKARI_NATURAL: 12,     // s to self-resolve
     KAKARI_RELEASE: 1.8,    // s of hold to release early
+    PULL_FACTOR: 0.025,     // 気性難の「行きたがり」：(50-気性)×この値だけ序盤に勝手に加速
+    PULL_MAX: 0.8,
 
     // Going multipliers
     GOING_MUL: { '良': 1.0, '稍重': 0.99, '重': 0.978, '不良': 0.965 },
@@ -150,10 +175,10 @@
     // Score
     RANK_POINTS: [1000, 600, 400, 250, 150, 100, 80, 60, 40, 25, 15, 10],
     BASE_TIMES: {
-      1200: { '良': 70.0,  '稍重': 70.7,  '重': 71.75, '不良': 72.8  },
-      1600: { '良': 94.0,  '稍重': 94.94, '重': 96.35, '不良': 97.76 },
-      2000: { '良': 120.0, '稍重': 121.2, '重': 123.0, '不良': 124.8 },
-      2400: { '良': 146.5, '稍重': 147.9, '重': 151.6, '不良': 152.4 },
+      1200: { '良': 70.0,  '稍重': 70.7,  '重': 71.8,  '不良': 72.8  },
+      1600: { '良': 92.5,  '稍重': 93.4,  '重': 94.8,  '不良': 96.2  },
+      2000: { '良': 117.5, '稍重': 118.7, '重': 120.4, '不良': 122.2 },
+      2400: { '良': 142.5, '稍重': 143.9, '重': 146.1, '不良': 148.2 },
     },
     TIME_BONUS_PER_TENTH: 5,
     TIME_BONUS_MAX: 300,
@@ -291,17 +316,23 @@
 
   // ── createRaceState ──
   function createRaceState(field, cond, rng, playerIndex) {
-    // drainBase calibration: consume ~70% of stamina over full distance at cruise speed
-    // cruiseSpeed ≈ 17.5 m/s on average; time = distance/cruiseSpeed
-    // drainBase = 0.7 * STAMINA_MAX / time
+    // drainBase: 巡航のまま全行程を走った場合に DRAIN_RACE_FRAC を消費する基準値
     const approxCruise = 17.5 * CONFIG.GOING_MUL[cond.going];
     const approxTime = cond.distance / approxCruise;
-    const drainBase = 0.7 * CONFIG.STAMINA_MAX / approxTime;
+    const drainBase = CONFIG.DRAIN_RACE_FRAC * CONFIG.STAMINA_MAX / approxTime;
+
+    let cruiseSum = 0;
 
     const horses = field.map((def, i) => {
+      // 当日の調子は「能力値」に±10%かける（最終速度に直接かけると影響が過大になる）
       const conditionMul = 0.9 + (def.condition / 100) * 0.2; // 0.9–1.1
-      const maxSpeed = (17.2 + def.speed * 0.022) * CONFIG.GOING_MUL[cond.going] * conditionMul;
+      const effSpeed = def.speed * conditionMul;
+      const effStamina = def.stamina * conditionMul;
+
+      const maxSpeed = (17.2 + effSpeed * 0.022) * CONFIG.GOING_MUL[cond.going] *
+        (CONFIG.DIST_SPEED_MUL[cond.distance] ?? 1.0);
       const cruiseSpeed = maxSpeed * CONFIG.CRUISE_RATIO;
+      cruiseSum += cruiseSpeed;
 
       // Distance fit penalty: each category off from ideal adds 8% drain
       const distIdx = [1200, 1600, 2000, 2400].indexOf(cond.distance);
@@ -309,18 +340,28 @@
 
       // Going fit: goingFit 0=best on good, 3=best on heavy
       const goingIdx = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[cond.going] ?? 0;
-      const goingPenalty = 1 + Math.max(0, goingIdx - def.goingFit) * 0.06;
+      // パワーが高いほど道悪ペナルティを軽減
+      const powerMitigation = Math.min(0.5, def.power * 0.004);
+      const goingPenalty = 1 + Math.max(0, goingIdx - def.goingFit) * 0.06 * (1 - powerMitigation);
 
-      const drainStaminaMul = (1.45 - def.stamina * 0.009) * distPenalty * goingPenalty;
+      const drainStaminaMul = (1.35 - effStamina * 0.0075) * distPenalty * goingPenalty;
 
-      // AI kick distance from finish based on style
+      // スパート開始距離（残り距離基準）。脚質と個体差で毎レース変わる
       const styleKick = {
-        nige:   cond.distance,        // kicks immediately (maintains lead)
-        senko:  150 + rng() * 100,
-        sashi:  350 + rng() * 100,
-        oikomi: 180 + rng() * 80,
+        nige:   400 + rng() * 150,
+        senko:  550 + rng() * 200,
+        sashi:  650 + rng() * 200,
+        oikomi: 480 + rng() * 200,
       };
-      const kickDist = styleKick[def.style] ?? 250;
+      const kickDist = Math.min(styleKick[def.style] ?? 550, cond.distance * 0.45);
+
+      // スタート遅延（ゲートの上手さ）。下手な馬は稀に大きく出遅れる
+      let startDelayOwn = CONFIG.START_DELAY_BASE +
+        ((100 - def.gate) / 100) * CONFIG.START_DELAY_GATE + rng() * 0.06;
+      if (rng() < ((100 - def.gate) / 100) * CONFIG.BAD_START_PROB) {
+        startDelayOwn += CONFIG.BAD_START_EXTRA_MIN +
+          rng() * (CONFIG.BAD_START_EXTRA_MAX - CONFIG.BAD_START_EXTRA_MIN);
+      }
 
       return {
         idx: i,
@@ -332,7 +373,8 @@
         stamina: CONFIG.STAMINA_MAX,
         maxSpeed,
         cruiseSpeed,
-        drainBase: drainBase * drainStaminaMul / 12, // per-second
+        drainBase: drainBase * drainStaminaMul, // per-second at cruise
+        startDelayOwn,
         isKakari: false,
         kakariTimer: 0,
         kakariAccum: 0,
@@ -341,23 +383,29 @@
         finishTime: 0,
         legPhase: rng() * Math.PI * 2,
         ai_kickDist: kickDist,
-        ai_targetLane: i,
+        ai_aggr: 0.85 + rng() * 0.3,  // 個体のペース嗜好（毎レース変動）
         ai_blockTimer: 0,
+        ai_railTimer: 1 + rng() * 2,  // 内ラチへ寄せる判断の間隔
       };
     });
 
+    const lap = CONFIG.LAP_LEN;
     return {
       horses,
       field,
       cond,
       rng,
+      // コース上のスタート位置（ゴール板固定・距離から逆算）
+      startS: ((CONFIG.GOAL_S - cond.distance) % lap + lap) % lap,
       elapsed: 0,
       finishedCount: 0,
       results: [],
       kakariCount: 0,
-      halfwayPace: 0,
-      halfwayRecorded: false,
+      fieldCruiseAvg: cruiseSum / field.length,
+      paceRatio: 0,
+      paceRecorded: false,
       playerIndex,
+      playerStartDelay: null, // ゲート演出のタップ精度で外から設定（未設定なら標準値）
       started: false,
       startDelay: 1.5 + rng() * 1.0, // 1.5–2.5s until gates open
       startTimer: 0,
@@ -366,9 +414,7 @@
 
   // ── stepRace ──
   function stepRace(state, dt, playerInput) {
-    state.elapsed += dt;
-
-    // Gate countdown
+    // Gate countdown（ゲート待ち中はレース時計を進めない）
     if (!state.started) {
       state.startTimer += dt;
       if (state.startTimer >= state.startDelay) {
@@ -378,13 +424,23 @@
       }
     }
 
+    state.elapsed += dt;
+
     const { horses, field, cond, rng } = state;
 
-    // Half-way pace measurement
-    if (!state.halfwayRecorded && state.elapsed > 15) {
-      const leading = horses.slice().sort((a, b) => b.progress - a.progress).slice(0, 4);
-      state.halfwayPace = leading.reduce((s, h) => s + h.speed, 0) / leading.length;
-      state.halfwayRecorded = true;
+    // ペース計測：先頭が15%地点→50%地点を走った区間平均速度を出走馬の巡航平均と比較
+    // （ゲートからの加速ロスを除くため2チェックポイント方式）
+    if (!state.paceRecorded) {
+      let leader = horses[0];
+      for (const o of horses) if (o.progress > leader.progress) leader = o;
+      if (state.paceT1 === undefined && leader.progress >= cond.distance * 0.15) {
+        state.paceT1 = state.elapsed;
+      }
+      if (state.paceT1 !== undefined && leader.progress >= cond.distance * 0.5) {
+        const segSpeed = (cond.distance * 0.35) / (state.elapsed - state.paceT1);
+        state.paceRatio = segSpeed / state.fieldCruiseAvg;
+        state.paceRecorded = true;
+      }
     }
 
     for (let i = 0; i < horses.length; i++) {
@@ -393,6 +449,10 @@
 
       const def = field[i];
       const isPlayer = i === state.playerIndex;
+
+      // 出遅れ：自分のゲート反応が済むまで動かない
+      const ownDelay = isPlayer ? (state.playerStartDelay ?? 0.15) : h.startDelayOwn;
+      if (state.elapsed < ownDelay) continue;
 
       // ── Lane change ──
       const input = isPlayer ? playerInput : null;
@@ -407,20 +467,32 @@
         if (!blocked) h.targetLane = newTarget;
       }
 
-      // AI lane change: try to find gap when blocked
+      // AI lane behavior: 詰まったら進路探し（スパート中は外、それ以外は内優先）、
+      // 空いていれば内ラチへ寄せてコーナーの距離ロスを避ける
       if (!isPlayer) {
         h.ai_blockTimer -= dt;
-        const blocked = isBlocked(horses, i, h.progress, h.laneF);
-        if (blocked && h.ai_blockTimer <= 0) {
-          // Try adjacent lanes
-          const tryLane = h.laneF < 6 ? h.targetLane + 1 : h.targetLane - 1;
-          const safeTarget = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, tryLane));
-          const canMove = !horses.some((o, j) => {
-            if (j === i || o.finished) return false;
-            return Math.abs(o.progress - h.progress) < CONFIG.LANE_CHANGE_BLOCK &&
-                   Math.abs(o.laneF - safeTarget) < 0.8;
-          });
-          if (canMove) { h.targetLane = safeTarget; h.ai_blockTimer = 2 + rng() * 2; }
+        h.ai_railTimer -= dt;
+        const blockedNow = isBlocked(horses, i, h.progress, h.laneF);
+        const spurting = (cond.distance - h.progress) <= h.ai_kickDist;
+        if (blockedNow && h.ai_blockTimer <= 0) {
+          const prefs = spurting
+            ? [h.targetLane + 1, h.targetLane - 1]
+            : [h.targetLane - 1, h.targetLane + 1];
+          for (const cand of prefs) {
+            const lane2 = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, cand));
+            if (lane2 === h.targetLane) continue;
+            const occupied = horses.some((o, j) => j !== i && !o.finished &&
+              Math.abs(o.progress - h.progress) < CONFIG.LANE_CHANGE_BLOCK &&
+              Math.abs(o.laneF - lane2) < 0.8);
+            if (!occupied) { h.targetLane = lane2; h.ai_blockTimer = 1.5 + rng() * 1.5; break; }
+          }
+        } else if (!blockedNow && h.ai_railTimer <= 0 && h.targetLane > 0) {
+          const inner = h.targetLane - 1;
+          const occupied = horses.some((o, j) => j !== i && !o.finished &&
+            Math.abs(o.progress - h.progress) < CONFIG.LANE_CHANGE_BLOCK + 1.5 &&
+            Math.abs(o.laneF - inner) < 0.8);
+          if (!occupied) h.targetLane = inner;
+          h.ai_railTimer = 1.5 + rng() * 2.0;
         }
       }
 
@@ -460,46 +532,81 @@
 
       // ── Target speed ──
       const remaining = cond.distance - h.progress;
+      const opening = h.progress < Math.min(500, cond.distance * 0.25);
+      const inSpurt = remaining <= h.ai_kickDist;
       let targetSpeed;
 
       if (isPlayer) {
         if (input && input.accel) {
-          targetSpeed = h.maxSpeed;
+          targetSpeed = h.maxSpeed + 1; // 実際の上限は effectiveMax（末脚ボーナス込み）で決まる
         } else if (input && input.hold) {
           targetSpeed = h.cruiseSpeed * 0.85;
         } else {
           targetSpeed = h.cruiseSpeed;
         }
+        // 行きたがり：気性難の馬は序盤、抑えないと勝手にペースが上がる
+        if (opening && def.temperament < 50 && !(input && input.hold)) {
+          targetSpeed += Math.min(CONFIG.PULL_MAX,
+            (50 - def.temperament) * CONFIG.PULL_FACTOR);
+        }
       } else {
-        // AI: maintain style-based pace
+        // AI: 脚質に従い「序盤の位置取り → 道中温存 → スパート」を演じる
         if (def.style === 'nige') {
-          targetSpeed = h.maxSpeed * 0.97; // front-runner, always pushing
+          if (inSpurt) {
+            targetSpeed = h.maxSpeed + 1; // effectiveMaxでクランプされる
+          } else if (opening) {
+            // 先頭を主張。前に馬がいる間は脚を使い、ハナを取れたら息を入れる
+            let drive = 0.15;
+            let anotherNigeNear = false;
+            let someoneAhead = false;
+            for (let j = 0; j < horses.length; j++) {
+              if (j === i || horses[j].finished) continue;
+              if (horses[j].progress > h.progress + 2) someoneAhead = true;
+              if (field[j].style === 'nige' &&
+                  Math.abs(horses[j].progress - h.progress) < 6) anotherNigeNear = true;
+            }
+            if (someoneAhead) drive = 0.9;
+            if (anotherNigeNear) drive += 0.35; // ハナ争い＝ハイペースの源
+            targetSpeed = h.cruiseSpeed + drive * h.ai_aggr;
+          } else {
+            targetSpeed = h.cruiseSpeed + 0.12 * h.ai_aggr;
+          }
         } else if (def.style === 'senko') {
-          targetSpeed = remaining <= h.ai_kickDist ? h.maxSpeed * (0.95 + rng() * 0.04) : h.cruiseSpeed * 1.02;
+          targetSpeed = inSpurt ? h.maxSpeed + 1
+                      : opening ? h.cruiseSpeed + 0.35 * h.ai_aggr
+                      : h.cruiseSpeed;
         } else if (def.style === 'sashi') {
-          targetSpeed = remaining <= h.ai_kickDist ? h.maxSpeed : h.cruiseSpeed * 0.98;
+          targetSpeed = inSpurt ? h.maxSpeed + 1
+                      : opening ? h.cruiseSpeed - 0.15
+                      : h.cruiseSpeed * 0.99;
         } else { // oikomi
-          targetSpeed = remaining <= h.ai_kickDist ? h.maxSpeed * 1.02 : h.cruiseSpeed * 0.95;
+          targetSpeed = inSpurt ? h.maxSpeed + 1
+                      : opening ? h.cruiseSpeed - 0.3
+                      : h.cruiseSpeed * 0.975;
+        }
+        // スタミナ残量を見た自重（スパート区間では使い切る）
+        if (!inSpurt && h.stamina < CONFIG.STAMINA_MAX * 0.20) {
+          targetSpeed = Math.min(targetSpeed, h.cruiseSpeed - 0.45);
         }
         // Add small random variance each step
-        targetSpeed *= (0.995 + rng() * 0.01);
+        targetSpeed *= (0.997 + rng() * 0.006);
       }
 
-      // ── Kakari ──
-      if (!h.isKakari) {
-        // Check trigger (player + AI with bad temperament)
-        if (def.temperament < CONFIG.KAKARI_TEMP_THRESH) {
-          const excess = h.speed - h.cruiseSpeed;
-          if (excess > CONFIG.KAKARI_EXCESS) {
-            h.kakariAccum += dt;
-            if (h.kakariAccum >= CONFIG.KAKARI_TIME) {
-              h.isKakari = true;
-              h.kakariTimer = CONFIG.KAKARI_NATURAL;
-              state.kakariCount++;
-            }
-          } else {
-            h.kakariAccum = Math.max(0, h.kakariAccum - dt * 0.5);
+      // ── Kakari ──（序盤限定・確率発生。気性難×ペースの上げすぎで起こる）
+      if (!h.isKakari &&
+          def.temperament < CONFIG.KAKARI_TEMP_THRESH &&
+          h.progress < cond.distance * CONFIG.KAKARI_PHASE) {
+        const excess = h.speed - h.cruiseSpeed;
+        if (excess > CONFIG.KAKARI_EXCESS) {
+          h.kakariAccum += dt;
+          if (h.kakariAccum >= CONFIG.KAKARI_TIME && rng() < CONFIG.KAKARI_PROB * dt) {
+            h.isKakari = true;
+            // AIは4〜8秒で自然に折り合いを取り戻す。プレイヤーは抑え操作で解消
+            h.kakariTimer = isPlayer ? CONFIG.KAKARI_NATURAL : 4 + rng() * 4;
+            state.kakariCount++;
           }
+        } else {
+          h.kakariAccum = Math.max(0, h.kakariAccum - dt * 0.5);
         }
       }
 
@@ -523,8 +630,10 @@
       targetSpeed = Math.min(targetSpeed, speedCap);
 
       // ── Bate (stamina-based speed limits) ──
+      // 残スタミナが多いほど末脚が伸びる（スタミナ温存の報酬）
       const staminaFrac = h.stamina / CONFIG.STAMINA_MAX;
-      let effectiveMax = h.maxSpeed;
+      let effectiveMax = h.maxSpeed +
+        Math.min(CONFIG.SPURT_FRESH_MAX, staminaFrac * CONFIG.SPURT_FRESH_K);
       if (staminaFrac <= 0) {
         effectiveMax = Math.min(h.cruiseSpeed * CONFIG.BATE_SPEED_FLOOR, effectiveMax);
       } else if (staminaFrac < CONFIG.BATE_THRESH_2) {
@@ -553,19 +662,25 @@
       }
 
       // ── Corner penalty → progress ──
-      const onCorner = isOnCorner(h.progress);
+      // コース位置 = startS + progress。発走直後の中立区間はロスなし
+      // （コーナー発走時の枠順不公平を防ぐ）
+      const onCorner = h.progress >= CONFIG.START_NEUTRAL_DIST &&
+        isOnCorner(state.startS + h.progress);
       const cornerFac = onCorner ? (1 - h.lane * CONFIG.CORNER_PENALTY) : 1.0;
       h.progress += h.speed * cornerFac * dt;
 
       // Leg animation phase
       h.legPhase += (h.speed / 3.0) * 2 * Math.PI * dt;
 
-      // ── Finish check ──
+      // ── Finish check ──（行き過ぎ分を補間して正確な通過時刻を出す）
       if (h.progress >= cond.distance) {
         h.finished = true;
-        h.finishTime = state.elapsed;
+        const overshoot = h.progress - cond.distance;
+        h.finishTime = state.elapsed - (h.speed > 0.1 ? overshoot / h.speed : 0);
         h.progress = cond.distance;
-        state.results.push({ index: i, finishTime: h.finishTime, rank: state.finishedCount + 1 });
+        state.results.push({ index: i, finishTime: h.finishTime, rank: 0 });
+        state.results.sort((a, b) => a.finishTime - b.finishTime);
+        state.results.forEach((r, ri) => { r.rank = ri + 1; });
         state.finishedCount++;
       }
     }
@@ -588,11 +703,11 @@
     return (s > sl && s < sl + c) || (s > 2 * sl + c);
   }
 
-  // ── paceLabel ──
+  // ── paceLabel ──（先頭の中間点平均速度 ÷ 出走馬の巡航平均で相対判定）
   function paceLabel(state) {
-    if (!state.halfwayRecorded) return 'ミドル';
-    if (state.halfwayPace > 16.5) return 'ハイ';
-    if (state.halfwayPace < 15.5) return 'スロー';
+    if (!state.paceRecorded) return 'ミドル';
+    if (state.paceRatio > CONFIG.PACE_HIGH) return 'ハイ';
+    if (state.paceRatio < CONFIG.PACE_SLOW) return 'スロー';
     return 'ミドル';
   }
   // ==== SIM-CORE-END ====
@@ -719,19 +834,28 @@
     railPosts.instanceMatrix.needsUpdate = true;
     scene.add(railPosts);
 
-    // Finish line at progress = 0
+    // ゴール板（コース固定位置 GOAL_S。ホームストレッチ上なので向きはx軸沿いでよい）
     const finishGeo = new THREE.PlaneGeometry(CONFIG.LANE_COUNT * CONFIG.LANE_WIDTH + 2, 1.5);
     const finishMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
     const finish = new THREE.Mesh(finishGeo, finishMat);
     finish.rotation.x = -Math.PI / 2;
-    const [fx, , fz] = worldPos(0, (CONFIG.LANE_COUNT - 1) / 2);
+    const [fx, , fz] = worldPos(CONFIG.GOAL_S, (CONFIG.LANE_COUNT - 1) / 2);
     finish.position.set(fx, 0.02, fz);
     scene.add(finish);
 
-    // Halon (distance marker) posts every 200m
+    // ゴール板の柱
+    const goalPostGeo = new THREE.BoxGeometry(0.25, 3.5, 0.25);
+    const goalPostMat = new THREE.MeshLambertMaterial({ color: 0xdd2222 });
+    const goalPost = new THREE.Mesh(goalPostGeo, goalPostMat);
+    const [gx, , gz] = worldPos(CONFIG.GOAL_S, -1.0);
+    goalPost.position.set(gx, 1.75, gz);
+    scene.add(goalPost);
+
+    // ハロン棒：ゴールから200mごとの残距離標識（コース固定）
     const halonGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
     const halonMat = new THREE.MeshLambertMaterial({ color: 0xff5050 });
-    for (let p = 200; p < CONFIG.LAP_LEN; p += 200) {
+    for (let k = 1; k <= 7; k++) {
+      const p = ((CONFIG.GOAL_S - 200 * k) % CONFIG.LAP_LEN + CONFIG.LAP_LEN) % CONFIG.LAP_LEN;
       const halon = new THREE.Mesh(halonGeo, halonMat);
       const [hx, , hz] = worldPos(p, CONFIG.LANE_COUNT + 1.2);
       halon.position.set(hx, 1, hz);
@@ -795,9 +919,10 @@
   // ── Update horse meshes each frame ──
   function updateHorseMeshes(state, frameCount) {
     state.horses.forEach((h, i) => {
-      const [x, , z] = worldPos(h.progress, h.laneF);
+      const cs = state.startS + h.progress; // コース位置
+      const [x, , z] = worldPos(cs, h.laneF);
       horseMeshes[i].position.set(x, 0, z);
-      horseMeshes[i].rotation.y = headingAngle(h.progress);
+      horseMeshes[i].rotation.y = headingAngle(cs);
 
       // Leg animation with performance gating
       const playerPos = horseMeshes[state.playerIndex].position;
@@ -817,8 +942,9 @@
   // ── Camera ──
   function updateCamera(state) {
     const h = state.horses[state.playerIndex];
-    const [px, , pz] = worldPos(h.progress, h.laneF);
-    const ang = headingAngle(h.progress);
+    const cs = state.startS + h.progress; // コース位置
+    const [px, , pz] = worldPos(cs, h.laneF);
+    const ang = headingAngle(cs);
     // Back-vector: opposite of heading direction (heading faces +z when ang=0)
     const bx = -Math.sin(ang);
     const bz = -Math.cos(ang);

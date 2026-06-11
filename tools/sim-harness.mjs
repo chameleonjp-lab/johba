@@ -39,6 +39,7 @@ const goingArg = process.argv[5] ?? '良';
 
 const styleJa = { nige: '逃げ', senko: '先行', sashi: '差し', oikomi: '追込' };
 const winners = new Map();
+const winStyles = new Map();
 const paces = new Map();
 const winTimes = [];
 const spreads = [];
@@ -69,16 +70,18 @@ for (let r = 0; r < races; r++) {
   spreads.push(last.finishTime - win.finishTime);
   if (state.kakariCount > 0) kakariRaces++;
   console.log(
-    `#${String(r + 1).padStart(2)} ${cond.distance}m ${cond.going} ペース:${pace} ` +
+    `#${String(r + 1).padStart(2)} ${cond.distance}m ${cond.going} ペース:${pace}(${(state.paceRatio ?? 0).toFixed(3)}) ` +
     `勝ち:${horse.num}番(${styleJa[horse.style] ?? horse.style}) ${win.finishTime.toFixed(2)}s ` +
     `(基準${cond.baseTime.toFixed(1)}s) 1-12着差:${(last.finishTime - win.finishTime).toFixed(2)}s` +
     (state.kakariCount > 0 ? ` 掛かり${state.kakariCount}頭` : '')
   );
+  winStyles.set(horse.style, (winStyles.get(horse.style) ?? 0) + 1);
 }
 
 const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
 console.log('---');
 console.log(`勝ち馬の種類: ${winners.size}頭 / ${races}レース`);
+console.log(`勝ち脚質: ${[...winStyles.entries()].map(([k, v]) => `${styleJa[k] ?? k}×${v}`).join(' ')}`);
 console.log(`ペース分布: ${[...paces.entries()].map(([k, v]) => `${k}×${v}`).join(' ')}`);
 console.log(`勝ちタイム: 平均${avg(winTimes).toFixed(2)}s 最速${Math.min(...winTimes).toFixed(2)}s 最遅${Math.max(...winTimes).toFixed(2)}s`);
 console.log(`着差(1-12着): 平均${avg(spreads).toFixed(2)}s 最小${Math.min(...spreads).toFixed(2)}s 最大${Math.max(...spreads).toFixed(2)}s`);
