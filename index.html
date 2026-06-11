@@ -2622,10 +2622,17 @@
       const isMe = playerName && name === playerName;
       const row = document.createElement('div');
       row.className = 'rank-row' + (isMe ? ' my-row' : '');
-      row.innerHTML =
-        `<span class="rank-no">${no}位</span>` +
-        `<span class="rank-name">${name}</span>` +
-        `<span class="rank-score">${score}点</span>`;
+      // display_name は他プレイヤー由来の外部データ。innerHTMLに入れるとXSSになるため
+      // 必ず textContent で組み立てる
+      const mk = (cls, text) => {
+        const s = document.createElement('span');
+        s.className = cls;
+        s.textContent = text;
+        return s;
+      };
+      row.appendChild(mk('rank-no', `${no}位`));
+      row.appendChild(mk('rank-name', String(name)));
+      row.appendChild(mk('rank-score', `${score}点`));
       box.appendChild(row);
     });
     if (box.children.length === 0) {
