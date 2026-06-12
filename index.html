@@ -78,9 +78,10 @@
       min-height: 44px;
     }
 
-    /* ===== TITLE SCREEN ===== */
+    /* ===== TITLE SCREEN =====（半透明：背後でアイドルカメラがコースを周回） */
     #screenTitle {
-      background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
+      background: linear-gradient(180deg, rgba(8, 8, 40, 0.84), rgba(20, 20, 66, 0.76));
+      box-shadow: inset 0 0 120px 40px rgba(0, 0, 0, 0.55);
       justify-content: center;
       padding: 16px;
       overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -490,6 +491,33 @@
       display: none;
     }
 
+    /* ===== GOAL FX（Q3：ゴールフラッシュ・1着紙吹雪・接戦キュー） ===== */
+    #goalFlash {
+      position: fixed; inset: 0; background: #fff; opacity: 0;
+      pointer-events: none; z-index: 30;
+      transition: opacity 0.14s ease-out;
+    }
+    #goalFlash.on { opacity: 0.55; }
+    #confettiBox {
+      position: fixed; inset: 0; pointer-events: none; z-index: 31;
+      overflow: hidden; display: none;
+    }
+    .confetti {
+      position: absolute; top: -14px; width: 8px; height: 14px;
+      opacity: 0.95; border-radius: 2px;
+      animation: confFall 2.2s ease-in forwards;
+    }
+    @keyframes confFall {
+      to { transform: translateY(110vh) rotate(720deg); opacity: 0.7; }
+    }
+    #slowMoCue {
+      position: fixed; top: 30%; left: 50%; transform: translateX(-50%);
+      pointer-events: none; z-index: 15; display: none;
+      font-size: 26px; font-weight: 900; color: #ffe066;
+      text-shadow: 0 0 10px #aa7700, 1px 1px 0 #000, -1px -1px 0 #000;
+      letter-spacing: 4px;
+    }
+
     /* ===== TOUCH-ACTION for scrollable areas ===== */
     #entriesList, #screenResult, .modal-box, #ceremonyRows,
     #screenTitle, #screenLottery {
@@ -560,6 +588,9 @@
 
   <!-- ==== LANE TOAST ==== -->
   <div id="laneToast"></div>
+  <div id="goalFlash"></div>
+  <div id="confettiBox"></div>
+  <div id="slowMoCue">接戦！</div>
 
   <!-- ==== CONTROLS ==== -->
   <div id="controls" style="display:none; pointer-events:none; z-index:20; position:fixed; bottom:0; left:0; width:100%;">
@@ -2352,6 +2383,10 @@
   }
 
   // ── Camera ──
+  // Q3: カメラ演出用の再利用ベクトル・ロール状態（毎フレームのアロケーション禁止）
+  const _camTarget = new THREE.Vector3();
+  let _camRoll = 0;
+
   function updateCamera(state) {
     const h = state.horses[state.playerIndex];
     const cs = state.startS + h.progress; // コース位置
@@ -2361,11 +2396,8 @@
     const bx = -Math.sin(ang);
     const bz = -Math.cos(ang);
 
-    const targetX = px + bx * 8;
-    const targetZ = pz + bz * 8;
-    const targetY = 3.2;
-
-    camera.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.12);
+    _camTarget.set(px + bx * 8, 3.2, pz + bz * 8);
+    camera.position.lerp(_camTarget, 0.12);
 
     const speedFrac = h.speed / h.maxSpeed;
     // Camera shake
@@ -2373,7 +2405,16 @@
     camera.position.x += (Math.random() - 0.5) * shake;
     camera.position.y += (Math.random() - 0.5) * shake * 0.5;
 
-    camera.lookAt(px, 0.5, pz);
+    // 視線はやや進行方向の先へ（コーナーで自然に内を向く）
+    camera.lookAt(px - bx * 4, 0.7, pz - bz * 4);
+
+    // コーナーバンク：少し先の向きとの差分から目標ロールを作り、滑らかに追従
+    let dAng = headingAngle(cs + 6) - ang;
+    if (dAng > Math.PI) dAng -= Math.PI * 2;
+    else if (dAng < -Math.PI) dAng += Math.PI * 2;
+    const targetRoll = Math.max(-0.05, Math.min(0.05, dAng * 1.4)) * speedFrac;
+    _camRoll += (targetRoll - _camRoll) * 0.08;
+    camera.rotateZ(_camRoll);
 
     camera.fov = 65 + speedFrac * 10;
     camera.updateProjectionMatrix();
@@ -2395,6 +2436,14 @@
   // Whether player has finished (enables fast-forward of remaining horses)
   let playerFinished = false;
 
+  // ゴール前接戦スローモーション（game-spec 9章の任意項目）。1レース1回・プレイヤー完走前のみ。
+  // playerFinished の早送りとは状態的に相互排他（完走した瞬間に解除する）
+  let slowMoT = 0;       // 残り実時間
+  let slowMoUsed = false;
+
+  // タイトル背後のアイドルカメラ周回
+  let idleT = 0;
+
   function gameLoop(now) {
     requestAnimationFrame(gameLoop);
 
@@ -2406,7 +2455,36 @@
     instancedShadows.visible = !!raceState;
 
     if (raceState && racePhase === 'running' && !shownResults) {
-      accumulator += dt;
+      // 接戦判定：残り100m以内で最寄りの未完走ライバルとの差が1.5m未満→0.4倍速を実時間1.6s
+      if (!slowMoUsed && !playerFinished) {
+        const p = raceState.horses[raceState.playerIndex];
+        const remain = raceState.cond.distance - p.progress;
+        if (remain < 100 && remain > 10) {
+          let nearest = Infinity;
+          for (let i = 0; i < raceState.horses.length; i++) {
+            if (i === raceState.playerIndex) continue;
+            const o = raceState.horses[i];
+            if (o.finished) continue;
+            const d = Math.abs(o.progress - p.progress);
+            if (d < nearest) nearest = d;
+          }
+          if (nearest < 1.5) {
+            slowMoUsed = true;
+            slowMoT = 1.6;
+            showSlowMoCue();
+          }
+        }
+      }
+      let simSpeed = 1;
+      if (slowMoT > 0) {
+        if (playerFinished) {
+          slowMoT = 0; // 完走後の早送りと相互排他
+        } else {
+          simSpeed = 0.4;
+          slowMoT -= dt;
+        }
+      }
+      accumulator += dt * simSpeed;
       accumulator = Math.min(accumulator, 0.1);
       let steppedThisFrame = false;
       let stepCount = 0;
@@ -2431,6 +2509,7 @@
       // Check if player just finished this frame
       if (!playerFinished && raceState.horses[raceState.playerIndex].finished) {
         playerFinished = true;
+        triggerGoalFx(raceState); // ゴールフラッシュ＋1着なら紙吹雪
       }
 
       // 鞭はエッジトリガ：stepRaceが走って消費した場合だけクリア（1タップ＝1発）。
@@ -2453,6 +2532,16 @@
       // Still render / update camera while in gate screen
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
+    } else if (!raceState && racePhase === 'idle') {
+      // タイトル背後のアイドルカメラ：コースをゆっくり周回（タイトル背景は半透明）
+      idleT += dt;
+      _camRoll = 0;
+      const s = (idleT * 9) % CONFIG.LAP_LEN;
+      const [ix, , iz] = worldPos(s, 4);
+      camera.position.set(ix * 1.25, 26, iz * 1.25);
+      camera.lookAt(ix * 0.4, 2, iz * 0.4);
+      camera.fov = 60;
+      camera.updateProjectionMatrix();
     }
 
     // ── Task 3: スターティングゲート ドアアニメ ──
@@ -2510,6 +2599,48 @@
   }
 
   requestAnimationFrame(gameLoop);
+
+  // ── Q3: ゴール演出（フラッシュ＋1着紙吹雪）と接戦キュー ──
+  let goalFxTimers = [];
+
+  function triggerGoalFx(state) {
+    const flash = document.getElementById('goalFlash');
+    flash.classList.add('on');
+    goalFxTimers.push(setTimeout(() => flash.classList.remove('on'), 180));
+
+    const res = state.results.find(r => r.index === state.playerIndex);
+    if (res && res.rank === 1) {
+      const box = document.getElementById('confettiBox');
+      box.style.display = 'block';
+      box.innerHTML = '';
+      const colors = ['#ffe066', '#44aaff', '#ff6688', '#66dd88', '#ffaa44', '#cc88ff'];
+      for (let i = 0; i < 30; i++) {
+        const c = document.createElement('span');
+        c.className = 'confetti';
+        c.style.left = (Math.random() * 100) + '%';
+        c.style.background = colors[i % colors.length];
+        c.style.animationDelay = (Math.random() * 0.5) + 's';
+        box.appendChild(c);
+      }
+      goalFxTimers.push(setTimeout(() => { box.style.display = 'none'; box.innerHTML = ''; }, 3200));
+    }
+  }
+
+  function showSlowMoCue() {
+    const cue = document.getElementById('slowMoCue');
+    cue.style.display = 'block';
+    goalFxTimers.push(setTimeout(() => { cue.style.display = 'none'; }, 1000));
+  }
+
+  function clearGoalFx() {
+    goalFxTimers.forEach(clearTimeout);
+    goalFxTimers = [];
+    document.getElementById('goalFlash').classList.remove('on');
+    const box = document.getElementById('confettiBox');
+    box.style.display = 'none';
+    box.innerHTML = '';
+    document.getElementById('slowMoCue').style.display = 'none';
+  }
 
   // Keep renderer/camera in sync with viewport
   window.addEventListener('resize', () => {
@@ -3169,6 +3300,9 @@
     shownResults = false;
     playerFinished = false;
     accumulator = 0;
+    slowMoT = 0;
+    slowMoUsed = false;
+    clearGoalFx();
     racePhase = 'gate';
 
     // Task 3: ゲート再配置（距離ごとにstartSが変わる）+ 表示リセット
@@ -3787,6 +3921,10 @@
     if (toastEl) { toastEl.style.display = 'none'; toastEl.textContent = ''; }
     // Reset mini map dots
     miniDots.forEach(d => { d.style.transform = 'translate(0,-50%)'; });
+    // Q3: スローモーション・ゴール演出のリセット
+    slowMoT = 0;
+    slowMoUsed = false;
+    clearGoalFx();
     // Reset weather to sunny default for title screen
     resetWeather();
   }
