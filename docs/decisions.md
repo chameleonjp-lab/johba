@@ -84,3 +84,9 @@
 - 同じ条件でもう一度の実装方式：スナップショット（lastRaceSetup = { cond, field, playerIdx }）をopenGateScreen冒頭で保存する方式。resetAll後に pending と playerIdx を snap から復元してopenGateScreenを呼ぶ。lastRaceSetupはresetAllに含まれないため復元まで保持される。フィールド定義（field配列）はレース中に変異しないため参照共有で安全（ランタイム状態はraceState側に独立）
 - シェア文の形式：「ジョーバ ${distance}m ${rank}着！スコア${score}点 称号「${title}」 #ジョーバ」に統一。URL付与・navigator.share→clipboardフォールバックの仕組みは変更なし
 - btnRetrySameのfallback：snapがnull（ゲート未到達の場合）はresetAll後にgoToCondScreenを呼ぶ（btnRetryと同じ挙動）
+
+### 品質向上ラウンド
+
+- 2026-06-12 Q1（R1 馬モデル刷新）：馬ジオメトリを全頭共有化した。THREE-SCENE先頭に `HORSE_GEO` テーブルを作り、`_sharedGeo()` で各ジオメトリに `userData.shared=true` を付与してモジュール読込時に1回だけ生成。`createHorseModel` は per-horse でマテリアル（被毛/シルク/暗色脚・尾・たてがみ/白キャップ）とメッシュ・ピボットのみ新規生成する。これに伴い `disposeObject3D` を `if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose()` に変更し、再レース時に共有ジオメトリを破棄してモデルが壊れる事故を防止（マテリアルは per-horse なので従来どおり破棄）。
+- 2026-06-12 Q1：ギャロップは横走法（transverse gallop）の位相設計を採用。脚位相オフセットを後左0.0/後右0.15/前左0.5/前右0.65（×2π）とし、上脚は `sin(p+off)*0.78-0.08`、膝（飛節）は `max(0,sin(p+off+0.9))` を前脚×1.15／後脚×-1.0で折り、後肢のホックが後方へ曲がる向きを表現。胴の上下動・首の逆位相・尾2節のラグも `run=min(1, speed/10)` で乗算し、ゲート（速度≈0）では自動的に立ち姿へ収束。鞭モーション（プレイヤーのみ）は whipTimer が WHIP_DURATION-0.35 を超える間だけ右腕ピボットを sin で1.1rad 振る。毎フレームのポーズ計算は新規アロケーションなし（module-level の `_shadowDummy` を再利用）。
+- 2026-06-12 Q1：馬の擬似影を `InstancedMesh(CircleGeometry, MeshBasicMaterial 半透明)` 1個（count=12, renderOrder=1, depthWrite=false）に集約。`updateHorseMeshes` の脚アニメ間引き（animEvery）の外で毎フレーム各馬の足元へ位置・向き・楕円スケール（0.85×1.85）を `setMatrixAt` で更新するため、遠方で脚アニメを間引いても影は追従する。影は `horseMeshes` 配列外の永続オブジェクトで dispose 対象にしない。レース外（raceState=null）は描画ループ冒頭で `instancedShadows.visible=false` にして隠す（初期行列はゼロスケールなので初回レース前も非表示）。

@@ -1507,10 +1507,12 @@
 
   // ==== SECTION: THREE-SCENE ====
 
-  // Dispose all geometries and materials in an Object3D hierarchy
+  // Dispose materials (per-horse) and any NON-shared geometry in an Object3D hierarchy.
+  // 馬モデルはジオメトリを全頭で共有するため、shared フラグの付いたジオメトリは破棄しない。
+  // （破棄すると再レース時に全頭のモデルが壊れる）
   function disposeObject3D(obj) {
     obj.traverse(o => {
-      if (o.geometry) o.geometry.dispose();
+      if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
       if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
     });
   }
@@ -1752,78 +1754,255 @@
   }
 
   // ── Horse model ──
+  // 全頭で共有するジオメトリ表。モデルは index.html 読込時に1回だけ生成する。
+  // 各ジオメトリに userData.shared=true を付け、disposeObject3D で破棄されないようにする。
+  // （per-horse で新規生成するのはマテリアルとメッシュのみ）
+  function _sharedGeo(geo) { geo.userData.shared = true; return geo; }
+  const HORSE_GEO = {
+    chest:   _sharedGeo(new THREE.BoxGeometry(0.62, 0.62, 1.15)),
+    hip:     _sharedGeo(new THREE.BoxGeometry(0.52, 0.56, 1.0)),
+    neck:    _sharedGeo(new THREE.BoxGeometry(0.26, 0.78, 0.34)),
+    head:    _sharedGeo(new THREE.BoxGeometry(0.24, 0.30, 0.5)),
+    muzzle:  _sharedGeo(new THREE.BoxGeometry(0.15, 0.17, 0.26)),
+    ear:     _sharedGeo(new THREE.BoxGeometry(0.05, 0.15, 0.05)),
+    upperLeg:_sharedGeo(new THREE.BoxGeometry(0.14, 0.52, 0.17)),
+    lowerLeg:_sharedGeo(new THREE.BoxGeometry(0.09, 0.52, 0.10)),
+    tail:    _sharedGeo(new THREE.BoxGeometry(0.10, 0.42, 0.13)),
+    jTorso:  _sharedGeo(new THREE.BoxGeometry(0.26, 0.44, 0.5)),
+    jHead:   _sharedGeo(new THREE.SphereGeometry(0.105, 8, 6)),
+    jCapCrown:_sharedGeo(new THREE.BoxGeometry(0.16, 0.1, 0.16)),
+    jCapBrim:_sharedGeo(new THREE.BoxGeometry(0.2, 0.04, 0.12)),
+    jArm:    _sharedGeo(new THREE.BoxGeometry(0.07, 0.34, 0.07)),
+    jLeg:    _sharedGeo(new THREE.BoxGeometry(0.08, 0.26, 0.1)),
+  };
+
+  // ギャロップ（横走法 transverse gallop）の脚位相オフセット。順序: 後左・後右・前左・前右。
+  // hind フラグは膝（飛節）の曲がる向きを反転させるために使う。
+  const HORSE_LEG_DEF = [
+    { x: -0.19, y: 0.98, z: -0.70, off: 0.0  * Math.PI * 2, hind: true  }, // hind left
+    { x:  0.19, y: 0.98, z: -0.70, off: 0.15 * Math.PI * 2, hind: true  }, // hind right
+    { x: -0.21, y: 1.00, z:  0.72, off: 0.5  * Math.PI * 2, hind: false }, // front left
+    { x:  0.21, y: 1.00, z:  0.72, off: 0.65 * Math.PI * 2, hind: false }, // front right
+  ];
+
   function createHorseModel(color, silksColor) {
     const g = new THREE.Group();
 
-    const bodyGeo   = new THREE.BoxGeometry(0.9, 0.5, 2.2);
-    const neckGeo   = new THREE.CylinderGeometry(0.12, 0.18, 0.55, 6);
-    const headGeo   = new THREE.BoxGeometry(0.22, 0.25, 0.45);
-    const legGeo    = new THREE.CylinderGeometry(0.08, 0.08, 0.65, 5);
-    const riderGeo  = new THREE.CylinderGeometry(0.12, 0.15, 0.34, 6);
-    const helmetGeo = new THREE.SphereGeometry(0.16, 7, 5);
+    // Per-horse materials only (geometries are shared).
+    const coatMat  = new THREE.MeshLambertMaterial({ color });
+    const darkMat  = new THREE.MeshLambertMaterial({ color: 0x2a1a0a }); // legs/mane/tail
+    const silksMat = new THREE.MeshLambertMaterial({ color: silksColor });
+    const capMat   = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
-    const bodyMat   = new THREE.MeshLambertMaterial({ color });
-    const legMat    = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
-    const silksMat  = new THREE.MeshLambertMaterial({ color: silksColor });
-    const helmetMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.set(0, 0.25, 0);
+    // ── Body (chest + hip) ──
+    const body = new THREE.Group();
+    const chest = new THREE.Mesh(HORSE_GEO.chest, coatMat);
+    chest.position.set(0, 1.08, 0.42);
+    body.add(chest);
+    const hip = new THREE.Mesh(HORSE_GEO.hip, coatMat);
+    hip.position.set(0, 1.04, -0.52);
+    body.add(hip);
     g.add(body);
 
-    const neck = new THREE.Mesh(neckGeo, bodyMat);
-    neck.position.set(0, 0.65, 0.8);
-    neck.rotation.x = -0.4;
-    g.add(neck);
+    // ── Neck → head → muzzle / ears ──
+    const neckPivot = new THREE.Group();
+    neckPivot.position.set(0, 1.28, 0.92);
+    neckPivot.rotation.x = -0.6;
+    const neck = new THREE.Mesh(HORSE_GEO.neck, coatMat);
+    neck.position.set(0, 0.32, 0);
+    neckPivot.add(neck);
 
-    const head = new THREE.Mesh(headGeo, bodyMat);
-    head.position.set(0, 0.82, 1.1);
-    g.add(head);
+    const headPivot = new THREE.Group();
+    headPivot.position.set(0, 0.66, 0.05); // neck top
+    headPivot.rotation.x = 0.9;            // head angled down-forward
+    const head = new THREE.Mesh(HORSE_GEO.head, coatMat);
+    headPivot.add(head);
+    const muzzle = new THREE.Mesh(HORSE_GEO.muzzle, coatMat);
+    muzzle.position.set(0, -0.03, 0.34); // in front of head
+    headPivot.add(muzzle);
+    const earL = new THREE.Mesh(HORSE_GEO.ear, darkMat);
+    earL.position.set(-0.07, 0.2, -0.12);
+    earL.rotation.z = 0.25;
+    headPivot.add(earL);
+    const earR = new THREE.Mesh(HORSE_GEO.ear, darkMat);
+    earR.position.set(0.07, 0.2, -0.12);
+    earR.rotation.z = -0.25;
+    headPivot.add(earR);
+    neckPivot.add(headPivot);
+    g.add(neckPivot);
 
-    // Four legs
-    const legOffsets = [[-0.3, -0.33, 0.6], [0.3, -0.33, 0.6], [-0.3, -0.33, -0.6], [0.3, -0.33, -0.6]];
-    const legMeshes = legOffsets.map(([x, y, z]) => {
-      const m = new THREE.Mesh(legGeo, legMat);
-      m.position.set(x, y, z);
-      g.add(m);
-      return m;
+    // ── Legs (upper + lower, knee pivot). Order matches HORSE_LEG_DEF. ──
+    const legs = HORSE_LEG_DEF.map(def => {
+      const pivot = new THREE.Group();
+      pivot.position.set(def.x, def.y, def.z);
+      const upper = new THREE.Mesh(HORSE_GEO.upperLeg, coatMat);
+      upper.position.set(0, -0.24, 0);
+      pivot.add(upper);
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.5, 0); // bottom of upper leg
+      const lower = new THREE.Mesh(HORSE_GEO.lowerLeg, darkMat);
+      lower.position.set(0, -0.24, 0);
+      knee.add(lower);
+      pivot.add(knee);
+      g.add(pivot);
+      return { pivot, knee, off: def.off, hind: def.hind };
     });
 
-    const rider = new THREE.Mesh(riderGeo, silksMat);
-    rider.position.set(0, 0.72, -0.3);
-    g.add(rider);
+    // ── Tail (2 segments, second lags) ──
+    const tailPivot = new THREE.Group();
+    tailPivot.position.set(0, 1.22, -1.0);
+    tailPivot.rotation.x = 0.7; // flowing back-down
+    const tail1 = new THREE.Mesh(HORSE_GEO.tail, darkMat);
+    tail1.position.set(0, -0.21, 0);
+    tailPivot.add(tail1);
+    const tail2Pivot = new THREE.Group();
+    tail2Pivot.position.set(0, -0.42, 0); // tip of seg1
+    const tail2 = new THREE.Mesh(HORSE_GEO.tail, darkMat);
+    tail2.scale.setScalar(0.7);
+    tail2.position.set(0, -0.15, 0);
+    tail2Pivot.add(tail2);
+    tailPivot.add(tail2Pivot);
+    g.add(tailPivot);
 
-    const helmet = new THREE.Mesh(helmetGeo, helmetMat);
-    helmet.position.set(0, 0.98, -0.3);
-    g.add(helmet);
+    // ── Jockey (deep crouch) ──
+    const jockey = new THREE.Group();
+    jockey.position.set(0, 1.5, -0.05);
+    const torso = new THREE.Mesh(HORSE_GEO.jTorso, silksMat);
+    torso.rotation.x = 0.75; // deep crouch
+    torso.position.set(0, 0, 0);
+    jockey.add(torso);
+    // head + cap in front-top of torso
+    const jHead = new THREE.Mesh(HORSE_GEO.jHead, capMat);
+    jHead.position.set(0, 0.2, 0.22);
+    jockey.add(jHead);
+    const jCapCrown = new THREE.Mesh(HORSE_GEO.jCapCrown, silksMat);
+    jCapCrown.position.set(0, 0.25, 0.22);
+    jockey.add(jCapCrown);
+    const jCapBrim = new THREE.Mesh(HORSE_GEO.jCapBrim, capMat);
+    jCapBrim.position.set(0, 0.22, 0.34);
+    jockey.add(jCapBrim);
+    // legs bent against flanks
+    const jLegL = new THREE.Mesh(HORSE_GEO.jLeg, silksMat);
+    jLegL.position.set(-0.14, -0.18, 0.02);
+    jockey.add(jLegL);
+    const jLegR = new THREE.Mesh(HORSE_GEO.jLeg, silksMat);
+    jLegR.position.set(0.14, -0.18, 0.02);
+    jockey.add(jLegR);
+    // arms angled forward-down toward neck; right arm under its own whipArmPivot
+    const jArmL = new THREE.Mesh(HORSE_GEO.jArm, silksMat);
+    jArmL.position.set(-0.14, 0.04, 0.22);
+    jArmL.rotation.x = -0.9;
+    jockey.add(jArmL);
+    const whipArmPivot = new THREE.Group();
+    whipArmPivot.position.set(0.14, 0.18, 0.02);
+    whipArmPivot.rotation.x = -0.9; // rest
+    const jArmR = new THREE.Mesh(HORSE_GEO.jArm, silksMat);
+    jArmR.position.set(0, -0.15, 0.04); // hang from shoulder pivot
+    whipArmPivot.add(jArmR);
+    jockey.add(whipArmPivot);
+    g.add(jockey);
 
-    // Attach leg refs for animation
-    g.userData.legs = { fl: legMeshes[0], fr: legMeshes[1], bl: legMeshes[2], br: legMeshes[3] };
+    // Animation refs (no per-frame allocation; baseY captured for body bob).
+    g.userData.anim = {
+      body,
+      baseY: body.position.y, // 0 (group origin), bob added on top
+      neckPivot,
+      headPivot,
+      tailPivot,
+      tail2: tail2Pivot,
+      legs,
+      whipArmPivot,
+      whipBase: whipArmPivot.rotation.x,
+    };
 
     return g;
   }
 
+  // ── Gallop animation for one horse (no per-frame allocations) ──
+  function animateHorse(mesh, h, isPlayer) {
+    const a = mesh.userData.anim;
+    const p = h.legPhase;
+    const run = Math.min(1, h.speed / 10); // standing(0)→galloping(1)
+
+    // Legs: upper swing + knee fold.
+    for (let k = 0; k < a.legs.length; k++) {
+      const L = a.legs[k];
+      const ph = p + L.off;
+      L.pivot.rotation.x = (Math.sin(ph) * 0.78 - 0.08) * run;
+      // hind knees (hocks) bend backwards → negative multiplier
+      const sign = L.hind ? -1.0 : 1.15;
+      L.knee.rotation.x = Math.max(0, Math.sin(ph + 0.9)) * sign * run;
+    }
+
+    // Body bob + pitch.
+    a.body.position.y = a.baseY + Math.abs(Math.sin(p)) * 0.07 * run;
+    a.body.rotation.x = Math.sin(p) * 0.05 * run;
+
+    // Neck counter-bob.
+    a.neckPivot.rotation.x = -0.6 + Math.sin(p + Math.PI) * 0.09 * run;
+
+    // Tail flow.
+    a.tailPivot.rotation.x = 0.7 + Math.sin(p) * 0.12 * run;
+    a.tailPivot.rotation.z = Math.sin(p * 0.7) * 0.18 * run;
+    a.tail2.rotation.x = Math.sin(p - 0.6) * 0.25 * run;
+
+    // Whip swing (player only) — short burst at the start of the whip effect.
+    if (isPlayer && h.whipTimer > CONFIG.WHIP_DURATION - 0.35) {
+      const t = (CONFIG.WHIP_DURATION - h.whipTimer) / 0.35; // 0→1 over the burst
+      a.whipArmPivot.rotation.x = a.whipBase + Math.sin(t * Math.PI) * 1.1;
+    } else {
+      a.whipArmPivot.rotation.x = a.whipBase;
+    }
+  }
+
+  // ── Pseudo shadows (single InstancedMesh, persistent — never disposed) ──
+  const SHADOW_MAX = 12;
+  const instancedShadows = new THREE.InstancedMesh(
+    new THREE.CircleGeometry(1, 12),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false }),
+    SHADOW_MAX
+  );
+  instancedShadows.renderOrder = 1;
+  instancedShadows.count = SHADOW_MAX;
+  // Initialize all instances to zero scale so nothing shows before the first race.
+  // YXZ order so rotation.y (heading) is applied in the WORLD frame AFTER the flat tilt.
+  const _shadowDummy = new THREE.Object3D();
+  _shadowDummy.rotation.order = 'YXZ';
+  _shadowDummy.scale.set(0, 0, 0);
+  _shadowDummy.updateMatrix();
+  for (let i = 0; i < SHADOW_MAX; i++) instancedShadows.setMatrixAt(i, _shadowDummy.matrix);
+  instancedShadows.instanceMatrix.needsUpdate = true;
+  scene.add(instancedShadows);
+
   // ── Update horse meshes each frame ──
   function updateHorseMeshes(state, frameCount) {
+    const playerPos = horseMeshes[state.playerIndex].position;
     state.horses.forEach((h, i) => {
       const cs = state.startS + h.progress; // コース位置
       const [x, , z] = worldPos(cs, h.laneF);
-      horseMeshes[i].position.set(x, 0, z);
-      horseMeshes[i].rotation.y = headingAngle(cs);
+      const heading = headingAngle(cs);
+      const mesh = horseMeshes[i];
+      mesh.position.set(x, 0, z);
+      mesh.rotation.y = heading;
 
-      // Leg animation with performance gating
-      const playerPos = horseMeshes[state.playerIndex].position;
+      // Gallop animation with performance gating (distant horses animate less often).
       const dist = Math.hypot(x - playerPos.x, z - playerPos.z);
       const animEvery = dist > 120 ? 0 : dist > 50 ? 3 : 1;
       if (animEvery > 0 && frameCount % animEvery === 0) {
-        const { fl, fr, bl, br } = horseMeshes[i].userData.legs;
-        const ph = h.legPhase;
-        fl.rotation.x = Math.sin(ph) * 0.55;
-        br.rotation.x = Math.sin(ph) * 0.55;
-        fr.rotation.x = Math.sin(ph + Math.PI) * 0.55;
-        bl.rotation.x = Math.sin(ph + Math.PI) * 0.55;
+        animateHorse(mesh, h, i === state.playerIndex);
       }
+
+      // Shadow follows every frame (outside the anim gating) so position tracks
+      // even when the leg animation is skipped for distant horses.
+      // Flat tilt (x=-π/2) maps local Y→world Z; heading via world Y (YXZ order).
+      // Local scale (0.85, 1.85) → world ellipse: 0.85 across, 1.85 along heading.
+      _shadowDummy.position.set(x, 0.02, z);
+      _shadowDummy.rotation.set(-Math.PI / 2, heading, 0);
+      _shadowDummy.scale.set(0.85, 1.85, 1);
+      _shadowDummy.updateMatrix();
+      instancedShadows.setMatrixAt(i, _shadowDummy.matrix);
     });
+    instancedShadows.instanceMatrix.needsUpdate = true;
   }
 
   // ── Camera ──
@@ -1875,6 +2054,10 @@
 
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
+
+    // 馬の擬似影はレース中（gate/running）だけ表示。raceState が無い間は隠す
+    // （updateHorseMeshes が呼ばれず行列が固まるため visible で確実に消す）。
+    instancedShadows.visible = !!raceState;
 
     if (raceState && racePhase === 'running' && !shownResults) {
       accumulator += dt;
