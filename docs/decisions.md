@@ -67,3 +67,13 @@
 - HUDの順位表示に nowrap+ellipsis+max-width:58% を追加（320px幅での折返し防止）。シェア/実験場リンクを44px化。tipのコントラストを#555→#888へ改善
 - ランキング表示のstored XSSを修正（display_nameはtextContentで組み立て）
 - console.warn 2件（送信/取得失敗時）は障害解析用として意図的に残置（プレイヤーには非表示）
+
+### UI/UX改善ラウンド（その1）
+
+- Task1 騎手名必須化：btnStart押下時に trim()が空なら#nameWarn（赤文字）を表示し、inputに.name-errorクラスを付与してfocus()。alertは使わない。inputイベントで警告をクリア
+- Task2 メッシュdispose：disposeObject3D(obj)をTHREE-SCENEセクション冒頭に追加。openGateScreen/resetAll両方でscene.remove前に呼ぶ。コース・雨・空（envRefs/rainPoints）はhorseMeshes配列外のため対象外
+- Task3 ミニマップ：HUDセクション内にinitMiniMap()で12個のdivを1回だけ生成。dotサイズはプレイヤー11px/他馬7px。更新はstyle.leftではなくtransform:translate(Xpx,-50%)（レイアウト発生を避けるため）。barWはモジュール変数にキャッシュしresizeで再計測。updateMiniMap(state)はゲームループのrunning中に毎フレーム呼び（playerFinishedとは独立）
+- Task4 条件相性：condFitScore()はdistFit/goingFit/power/stamina/burstから純粋に計算。マーク◎s≥3/○1..2/△-1..0/✕≤-2。短評は最初に当てはまった1つ。出走表のentry-statsの下に10px行として追加。詳細モーダルにも「条件相性」行を追加（pending.condが設定されている時のみ）。出走表ヘッダーに「相性＝今回の距離・馬場」の凡例を小さく追記
+- Task5 作戦メモ強化：showLotteryReveal内でadvisesを最大5条件で評価し先頭2件だけ選択。hint-boxをinnerHTMLでビルドし「作戦メモ」ヘッダー+脚質ヒント+アドバイス箇条書き構成に変更
+- Task6 進路フィードバック：canChangeLane(dir)はstepRaceのlane change条件と同ロジック（LANE_CHANGE_BLOCKとlaneF距離<0.8）。符号確認：swipe右(dx>0)→laneDir+1→targetLane増加→外へ。showLaneToast(dir)を各入力イベントのlaneDir設定直後に呼ぶ。laneToastTimerは1本を使い回し。resetAllでクリア・非表示化
+- Task7 UI調整：tipを「横持ちプレイ推奨（縦でも遊べます）」に変更しtitle-btnsの直下に移動。ルール説明モーダル冒頭に「まずはこれだけ」ボックス（rgba(68,170,255,0.1)背景・角丸）を追加。スクロール領域（#entriesList/#screenResult/.modal-box/#ceremonyRows/#screenTitle/#screenLottery）にtouch-action:pan-yを追加

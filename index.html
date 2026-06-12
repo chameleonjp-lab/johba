@@ -343,6 +343,10 @@
     }
     #playerName::placeholder { color: #556; }
     #playerName:focus { border-color: #44aaff; background: rgba(68,170,255,0.1); }
+    #playerName.name-error { border-color: #ff6666; background: rgba(255,80,80,0.08); }
+    #nameWarn {
+      font-size: 13px; color: #ff8888; display: none; text-align: left;
+    }
 
     /* ===== RANKING SECTION (result screen) ===== */
     #rankingSection {
@@ -426,6 +430,49 @@
       z-index: 60;
     }
 
+    /* ===== MINI MAP ===== */
+    #miniMap {
+      position: relative;
+      height: 10px; width: 100%;
+      background: rgba(0,0,0,0.35);
+      border-radius: 5px;
+      margin-top: 5px;
+      pointer-events: none;
+      overflow: visible;
+    }
+    #miniMapGoalTick {
+      position: absolute; right: 0; top: 0; width: 2px; height: 100%;
+      background: #fff;
+    }
+    #miniMapGoalLabel {
+      position: absolute; right: 3px; top: -10px;
+      font-size: 9px; color: #fff; font-weight: 700;
+      line-height: 1;
+    }
+    .mm-dot {
+      position: absolute; top: 50%;
+      transform: translate(0,-50%);
+      border-radius: 50%;
+      opacity: 0.9;
+    }
+
+    /* ===== LANE TOAST ===== */
+    #laneToast {
+      position: fixed; top: 38%; left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none; z-index: 15;
+      font-size: 20px; font-weight: 900;
+      text-shadow: 0 0 6px #000, 1px 1px 0 #000, -1px -1px 0 #000;
+      white-space: nowrap;
+      display: none;
+    }
+
+    /* ===== TOUCH-ACTION for scrollable areas ===== */
+    #entriesList, #screenResult, .modal-box, #ceremonyRows,
+    #screenTitle, #screenLottery {
+      touch-action: pan-y;
+    }
+
     /* ===== 低い画面（iPhone SE縦持ち等）への対応 ===== */
     /* justify-content:center + overflow は上端がクリップされるため上詰めに切り替える */
     @media (max-height: 640px) {
@@ -480,7 +527,16 @@
         padding:2px 8px; border-radius:11px; color:#fff;
         background:rgba(240,130,20,0.92); text-shadow:0 1px 2px #000;">⚡ 掛かり！</span>
     </div>
+
+    <!-- Mini map -->
+    <div id="miniMap">
+      <div id="miniMapGoalTick"></div>
+      <div id="miniMapGoalLabel">G</div>
+    </div>
   </div>
+
+  <!-- ==== LANE TOAST ==== -->
+  <div id="laneToast"></div>
 
   <!-- ==== CONTROLS ==== -->
   <div id="controls" style="display:none; pointer-events:none; z-index:20; position:fixed; bottom:0; left:0; width:100%;">
@@ -516,22 +572,29 @@
     <div id="playerNameWrap">
       <label for="playerName">騎手名（ランキング用・10文字まで）</label>
       <input id="playerName" type="text" maxlength="10" autocomplete="nickname" placeholder="名前を入力">
+      <span id="nameWarn">騎手名を入力してください</span>
     </div>
     <div class="title-btns">
       <button id="btnStart" class="btn-primary">レース開始</button>
       <button id="btnRules" class="btn-secondary">ルール説明</button>
     </div>
+    <p class="tip" style="font-size:13px;color:#9ab;margin-top:8px;margin-bottom:0;">横持ちプレイ推奨（縦でも遊べます）</p>
     <div class="sub-links">
       <button id="btnShare">ゲームをシェア</button>
       <a href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
-    <p class="tip">横持ち推奨</p>
   </div>
 
   <!-- ---- Rules modal ---- -->
   <div id="rulesModal" class="modal-backdrop">
     <div class="modal-box">
       <h3>ルール・操作説明</h3>
+      <div style="background:rgba(68,170,255,0.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+        <p style="font-size:13px;color:#88ccff;font-weight:700;margin-bottom:4px;">まずはこれだけ</p>
+        <p style="font-size:13px;color:#ccc;margin-bottom:2px;">・▲で仕掛ける／▼で抑える</p>
+        <p style="font-size:13px;color:#ccc;margin-bottom:2px;">・左右スワイプか画面端タップで進路変更</p>
+        <p style="font-size:13px;color:#ccc;margin-bottom:0;">・ムチで一気に加速（スタミナ消費）</p>
+      </div>
       <p><strong>目標：</strong>12頭のレースで1着を目指しましょう。</p>
       <ul>
         <li><strong>右下ボタン▲（仕掛ける）</strong>：スピードを上げます。スタミナ消費が増えます。</li>
@@ -1415,6 +1478,14 @@
 
   // ==== SECTION: THREE-SCENE ====
 
+  // Dispose all geometries and materials in an Object3D hierarchy
+  function disposeObject3D(obj) {
+    obj.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+    });
+  }
+
   // Progress is measured along the INSIDE RAIL centerline.
   // worldPos: (progress_meters, lane_float) → [x, y, z]
   function worldPos(progress, lane) {
@@ -1808,6 +1879,7 @@
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
       if (!playerFinished) updateHUD(raceState);
+      updateMiniMap(raceState);
 
       if (raceState.finishedCount === 12 && !shownResults) {
         shownResults = true;
@@ -1844,6 +1916,62 @@
   });
 
   // ==== SECTION: HUD ====
+
+  // ── Mini map setup (dots created once) ──
+  const miniDots = [];
+  let miniMapBarW = 0;
+
+  (function initMiniMap() {
+    const bar = document.getElementById('miniMap');
+    for (let i = 0; i < 12; i++) {
+      const d = document.createElement('div');
+      d.className = 'mm-dot';
+      bar.appendChild(d);
+      miniDots.push(d);
+    }
+    miniMapBarW = bar.offsetWidth || 200;
+  })();
+
+  window.addEventListener('resize', () => {
+    const bar = document.getElementById('miniMap');
+    if (bar) miniMapBarW = bar.offsetWidth || miniMapBarW;
+  });
+
+  // Assign dot colors/sizes from horse definitions (called at race start)
+  function setupMiniMapDots(field, playerIdx) {
+    for (let i = 0; i < 12; i++) {
+      const d = miniDots[i];
+      const isPlayer = i === playerIdx;
+      if (isPlayer) {
+        d.style.width = '11px';
+        d.style.height = '11px';
+        d.style.background = '#ffe066';
+        d.style.border = '2px solid #fff';
+        d.style.zIndex = '5';
+      } else {
+        d.style.width = '7px';
+        d.style.height = '7px';
+        d.style.background = hexColor(field[i].silks);
+        d.style.border = 'none';
+        d.style.zIndex = '2';
+      }
+      d.style.transform = 'translate(0,-50%)';
+    }
+  }
+
+  // Update dot positions every frame (no DOM query, no layout-triggering style.left)
+  function updateMiniMap(state) {
+    const dist = state.cond.distance;
+    const barW = miniMapBarW;
+    for (let i = 0; i < state.horses.length; i++) {
+      const h = state.horses[i];
+      const isPlayer = i === state.playerIndex;
+      const dotW = isPlayer ? 11 : 7;
+      const x = Math.min(1, h.progress / dist) * (barW - dotW);
+      miniDots[i].style.transform = `translate(${x}px,-50%)`;
+    }
+  }
+
   function updateHUD(state) {
     const h = state.horses[state.playerIndex];
     const remaining = Math.max(0, state.cond.distance - h.progress);
@@ -1876,6 +2004,39 @@
   }
 
   // ==== SECTION: INPUT ====
+
+  // ── Lane change feasibility check (used by toast) ──
+  function canChangeLane(dir) {
+    if (!raceState) return false;
+    const h = raceState.horses[raceState.playerIndex];
+    const target = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, h.targetLane + dir));
+    if (target === h.targetLane) return false; // at edge, can't move
+    return !raceState.horses.some((o, j) => j !== raceState.playerIndex && !o.finished &&
+      Math.abs(o.progress - h.progress) < CONFIG.LANE_CHANGE_BLOCK && Math.abs(o.laneF - target) < 0.8);
+  }
+
+  // ── Lane toast ──
+  let laneToastTimer = null;
+
+  function showLaneToast(dir) {
+    if (racePhase !== 'running' || !raceState) return;
+    const toastEl = document.getElementById('laneToast');
+    if (!toastEl) return;
+    clearTimeout(laneToastTimer);
+    if (canChangeLane(dir)) {
+      // dir -1 = inner (内), dir +1 = outer (外)
+      toastEl.textContent = dir < 0 ? '内へ' : '外へ';
+      toastEl.style.color = '#fff';
+    } else {
+      toastEl.textContent = '進路なし！';
+      toastEl.style.color = '#ff6666';
+    }
+    toastEl.style.display = 'block';
+    laneToastTimer = setTimeout(() => {
+      toastEl.style.display = 'none';
+    }, 500);
+  }
+
   const currentInput = { accel: false, hold: false, laneDir: 0, whip: false };
 
   let swipeStartX = null;
@@ -1896,15 +2057,19 @@
         const dx = t.clientX - (swipeStartX ?? t.clientX);
         if (Math.abs(dx) > 40) {
           // Swipe: lane change
-          currentInput.laneDir = dx > 0 ? 1 : -1;
+          const dir = dx > 0 ? 1 : -1;
+          currentInput.laneDir = dir;
+          showLaneToast(dir);
           setTimeout(() => { currentInput.laneDir = 0; }, 80);
         } else {
           // Tap: left/right edge = lane change
           if (t.clientX < innerWidth * 0.2) {
             currentInput.laneDir = -1;
+            showLaneToast(-1);
             setTimeout(() => { currentInput.laneDir = 0; }, 80);
           } else if (t.clientX > innerWidth * 0.8) {
             currentInput.laneDir = 1;
+            showLaneToast(1);
             setTimeout(() => { currentInput.laneDir = 0; }, 80);
           }
         }
@@ -1936,8 +2101,8 @@
       if (e.repeat) return;
       if (e.key === 'ArrowUp' || e.key === ' ') currentInput.accel = true;
       else if (e.key === 'ArrowDown') currentInput.hold = true;
-      else if (e.key === 'ArrowLeft') { currentInput.laneDir = -1; setTimeout(() => { currentInput.laneDir = 0; }, 80); }
-      else if (e.key === 'ArrowRight') { currentInput.laneDir = 1; setTimeout(() => { currentInput.laneDir = 0; }, 80); }
+      else if (e.key === 'ArrowLeft') { currentInput.laneDir = -1; showLaneToast(-1); setTimeout(() => { currentInput.laneDir = 0; }, 80); }
+      else if (e.key === 'ArrowRight') { currentInput.laneDir = 1; showLaneToast(1); setTimeout(() => { currentInput.laneDir = 0; }, 80); }
       else if (e.key === 'w' || e.key === 'W') currentInput.whip = true; // 鞭（ワンショット・ループでクリア）
     });
     window.addEventListener('keyup', e => {
@@ -1986,6 +2151,47 @@
     return ['✕', '△', '○', '◎'][v] ?? '?';
   }
 
+  // ── condFitScore: 今回の距離・馬場との相性スコアを計算 ──
+  function condFitScore(def, cond) {
+    const distIdx = [1200,1600,2000,2400].indexOf(cond.distance);
+    const goingIdx = {'良':0,'稍重':1,'重':2,'不良':3}[cond.going] ?? 0;
+    let s = 0;
+    const dGap = Math.abs(def.distFit - distIdx);
+    s += dGap === 0 ? 2 : dGap === 1 ? 0 : dGap === 2 ? -2 : -3;
+    if (goingIdx >= 1) {
+      s += def.goingFit >= goingIdx ? 1 : (goingIdx - def.goingFit >= 2 ? -2 : -1);
+      if (def.power >= 70) s += 1;
+    }
+    if (cond.distance >= 2000) s += def.stamina >= 75 ? 1 : (def.stamina < 50 ? -1 : 0);
+    if (cond.distance <= 1600 && def.burst >= 75) s += 1;
+    return s;
+  }
+
+  // condFit mark and color from score
+  function condFitMark(s) {
+    if (s >= 3) return { mark: '◎', color: '#44ffaa' };
+    if (s >= 1) return { mark: '○', color: '#aaddff' };
+    if (s >= -1) return { mark: '△', color: '#ccaa66' };
+    return { mark: '✕', color: '#ff8888' };
+  }
+
+  // condFit short comment
+  function condFitComment(def, cond) {
+    const distIdx = [1200,1600,2000,2400].indexOf(cond.distance);
+    const goingIdx = {'良':0,'稍重':1,'重':2,'不良':3}[cond.going] ?? 0;
+    const dGap = Math.abs(def.distFit - distIdx);
+    if (dGap === 0 && goingIdx >= 1 && def.goingFit >= goingIdx) return '距離も馬場もぴったり';
+    if (dGap === 0) return 'この距離は合う';
+    if (dGap >= 2) return def.distFit < distIdx ? '距離が長すぎるかも' : '距離が短すぎるかも';
+    if (goingIdx >= 2 && def.goingFit >= 2) return '道悪はむしろ歓迎';
+    if (goingIdx >= 2 && def.goingFit === 0) return '道悪は苦手';
+    if (goingIdx >= 1 && def.power >= 70) return 'パワーで渋った馬場もこなす';
+    if (cond.distance >= 2000 && def.stamina < 50) return '長丁場は少し不安';
+    if (cond.distance >= 2000 && def.stamina >= 75) return 'スタミナ豊富で長丁場向き';
+    if (def.burst >= 75) return '瞬発力勝負向き';
+    return '条件は可もなく不可もなく';
+  }
+
   // Show/hide screens
   function showScreen(id) {
     const ids = ['screenTitle', 'screenCond', 'screenEntries', 'screenLottery', 'screenGate', 'screenResult', 'screenCeremony'];
@@ -2009,10 +2215,24 @@
   })();
 
   document.getElementById('playerName').addEventListener('input', () => {
-    localStorage.setItem('johba_player_name', document.getElementById('playerName').value);
+    const inp = document.getElementById('playerName');
+    localStorage.setItem('johba_player_name', inp.value);
+    // Clear name validation error when user starts typing
+    const warn = document.getElementById('nameWarn');
+    warn.style.display = 'none';
+    inp.classList.remove('name-error');
   });
 
   document.getElementById('btnStart').addEventListener('click', () => {
+    const inp = document.getElementById('playerName');
+    const name = inp.value.trim();
+    if (!name) {
+      const warn = document.getElementById('nameWarn');
+      warn.style.display = 'block';
+      inp.classList.add('name-error');
+      inp.focus();
+      return;
+    }
     goToCondScreen();
   });
 
@@ -2071,7 +2291,7 @@
     pickedIndices = [];
 
     document.getElementById('entriesCondLine').textContent =
-      `${cond.distance}m ${cond.going} / 天気：${cond.weather}`;
+      `${cond.distance}m ${cond.going} / 天気：${cond.weather}  ※相性＝今回の距離・馬場`;
     document.getElementById('entriesPickStatus').textContent =
       '希望馬を3頭選んでください';
     document.getElementById('btnApply').textContent = '希望を申請する（0/3）';
@@ -2086,6 +2306,9 @@
 
       const frameColor = hexColor(CONFIG.FRAME_COLORS[h.frame - 1]);
       const textColor = frameTextColor(h.frame - 1);
+      const score = condFitScore(h, cond);
+      const { mark, color } = condFitMark(score);
+      const comment = condFitComment(h, cond);
 
       row.innerHTML = `
         <div class="frame-chip" style="background:${frameColor};color:${textColor};">${h.frame}</div>
@@ -2094,6 +2317,7 @@
           <div class="entry-name">${h.name}</div>
           <div class="entry-meta">${styleLabel(h.style)} / 距離:${distFitLabel(h.distFit)}</div>
           <div class="entry-stats">スピ${statGrade(h.speed)} スタ${statGrade(h.stamina)} 瞬発${statGrade(h.burst)} パワ${statGrade(h.power)}</div>
+          <div style="font-size:10px;margin-top:2px;"><span style="color:${color};font-weight:700;">相性${mark}</span> <span style="color:#999;">${comment}</span></div>
         </div>
         <div class="going-fit-mark">${goingFitMark(h.goingFit)}</div>
         <div class="entry-check" id="check_${idx}">✓</div>
@@ -2158,6 +2382,15 @@
     const fc = hexColor(CONFIG.FRAME_COLORS[h.frame - 1]);
     const tc = frameTextColor(h.frame - 1);
 
+    // condFit row — only when pending.cond is set (entries screen context)
+    let condFitHtml = '';
+    if (pending.cond) {
+      const score = condFitScore(h, pending.cond);
+      const { mark, color } = condFitMark(score);
+      const comment = condFitComment(h, pending.cond);
+      condFitHtml = `<div class="stat-line"><span class="stat-label">条件相性</span><span class="stat-val"><span style="color:${color};font-weight:700;">${mark}</span> <span style="font-size:11px;color:#999;">${comment}</span></span></div>`;
+    }
+
     let html = `
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
         <div class="frame-chip" style="background:${fc};color:${tc};">${h.frame}</div>
@@ -2168,6 +2401,7 @@
       <div class="stat-line"><span class="stat-label">瞬発力</span><span class="stat-val">${h.burst}（${statGrade(h.burst)}）</span></div>
       <div class="stat-line"><span class="stat-label">パワー</span><span class="stat-val">${h.power}（${statGrade(h.power)}）</span></div>
       <div class="stat-line"><span class="stat-label">馬場適性</span><span class="stat-val">${goingFitMark(h.goingFit)}</span></div>
+      ${condFitHtml}
     `;
 
     if (showSecret) {
@@ -2246,11 +2480,20 @@
     const condLabel = winner.condition >= 90 ? '絶好調' : winner.condition >= 70 ? '好調' : winner.condition >= 45 ? '普通' : winner.condition >= 25 ? '不調' : '絶不調';
     const gateLabel = winner.gate >= 70 ? '上手' : winner.gate >= 40 ? 'ふつう' : '下手';
     const hintMap = {
-      nige:   '「ハナを取って粘り込もう」',
-      senko:  '「好位で脚を溜めて直線で抜け出そう」',
-      sashi:  '「中団で我慢して残り700mから仕掛けよう」',
-      oikomi: '「最後方で溜めて直線一気！」',
+      nige:   'ハナを取って粘り込もう',
+      senko:  '好位で脚を溜めて直線で抜け出そう',
+      sashi:  '中団で我慢して残り700mから仕掛けよう',
+      oikomi: '最後方で溜めて直線一気！',
     };
+
+    // Build strategy advice lines (pick up to 2)
+    const advices = [];
+    if (winner.gate < 40)        advices.push('スタート集中。出遅れると厳しい');
+    if (winner.temperament < 45) advices.push('序盤は▼で抑えて掛かりを防げ');
+    if (winner.stamina < 50)     advices.push('早仕掛け厳禁。終盤まで我慢');
+    if (winner.burst >= 75)      advices.push('直線まで脚を残せば鋭く伸びる');
+    if (winner.stamina >= 80)    advices.push('スタミナ自慢。早めに動いても保つ');
+    const adviceLines = advices.slice(0, 2);
 
     document.getElementById('revealHorseName').textContent =
       `${winner.num}番 ${winner.name}`;
@@ -2273,8 +2516,12 @@
       <div class="spec-row"><span class="spec-key">ゲート</span><span class="spec-val">${gateLabel}</span></div>
     `;
 
-    document.getElementById('lotteryHint').textContent =
-      `作戦のヒント：${hintMap[winner.style] ?? ''}`;
+    // Build strategy memo: first line = style hint, then up to 2 individual advices
+    let memoHtml = `<div style="font-weight:700;margin-bottom:4px;">作戦メモ</div>`;
+    memoHtml += `<div>・${hintMap[winner.style] ?? ''}</div>`;
+    adviceLines.forEach(a => { memoHtml += `<div>・${a}</div>`; });
+    document.getElementById('lotteryHint').innerHTML = memoHtml;
+    document.getElementById('lotteryHint').style.fontSize = '12px';
 
     document.getElementById('lotteryReveal').style.display = 'flex';
     document.getElementById('lotteryReveal').style.flexDirection = 'column';
@@ -2302,8 +2549,8 @@
     // Apply weather/going visuals for this race
     applyWeather(cond);
 
-    // Build/reset horse meshes
-    horseMeshes.forEach(m => scene.remove(m));
+    // Build/reset horse meshes (dispose geometries/materials to avoid memory leaks)
+    horseMeshes.forEach(m => { disposeObject3D(m); scene.remove(m); });
     horseMeshes = [];
     field.forEach(def => {
       const m = createHorseModel(def.coat, def.silks);
@@ -2316,6 +2563,12 @@
     playerFinished = false;
     accumulator = 0;
     racePhase = 'gate';
+
+    // Set up mini map dot colors and reset positions
+    setupMiniMapDots(field, playerIdx);
+    // Reset bar width measurement (in case layout shifted)
+    const mmBar = document.getElementById('miniMap');
+    if (mmBar) miniMapBarW = mmBar.offsetWidth || miniMapBarW;
 
     // Place meshes at gate position
     updateHorseMeshes(raceState, 0);
@@ -2819,8 +3072,8 @@
   });
 
   function resetAll() {
-    // Remove all horse meshes
-    horseMeshes.forEach(m => scene.remove(m));
+    // Remove all horse meshes (dispose geometries/materials to avoid memory leaks)
+    horseMeshes.forEach(m => { disposeObject3D(m); scene.remove(m); });
     horseMeshes = [];
     raceState = null;
     shownResults = false;
@@ -2844,6 +3097,13 @@
     gateSignalFired = false;
     gateEarlyTap = false;
     lastStartLabel = '';
+    // Reset lane toast
+    clearTimeout(laneToastTimer);
+    laneToastTimer = null;
+    const toastEl = document.getElementById('laneToast');
+    if (toastEl) { toastEl.style.display = 'none'; toastEl.textContent = ''; }
+    // Reset mini map dots
+    miniDots.forEach(d => { d.style.transform = 'translate(0,-50%)'; });
     // Reset weather to sunny default for title screen
     resetWeather();
   }
