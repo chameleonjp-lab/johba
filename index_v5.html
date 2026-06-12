@@ -1030,10 +1030,9 @@
       fieldCruiseAvg: cruiseSum / field.length,
       paceRatio: 0,
       paceRecorded: false,
-      // プレイヤー馬のレース統計（講評・騎乗メモ用）。安価に維持する
+      // プレイヤー馬のレース統計（フェーズ4の講評用）。安価に維持する
       playerStats: {
         kakariTime: 0,         // 掛かっていた累積秒数
-        blockedTime: 0,        // 前が壁だった累積秒数（全区間）
         blockedFinalTime: 0,   // 残り600m以内で壁だった累積秒数
         whipCount: 0,          // 鞭の使用回数（完走時に確定）
         spurtRemain: null,     // スパート開始（巡航超過）時の残り距離 m
@@ -1347,10 +1346,7 @@
       if (isPlayer) {
         const ps = state.playerStats;
         if (h.isKakari) ps.kakariTime += dt;
-        if (h.isWalled) {
-          ps.blockedTime += dt;
-          if (remaining < 600) ps.blockedFinalTime += dt;
-        }
+        if (h.isWalled && remaining < 600) ps.blockedFinalTime += dt;
         const halfway = cond.distance * 0.5;
         if (ps.spurtRemain === null && h.progress > halfway && h.speed > h.cruiseSpeed + 0.6) {
           ps.spurtRemain = remaining;
@@ -2289,11 +2285,8 @@
   let gateSignalTime = null;       // performance.now() when signal fires
   let gateTapHandled = false;
   let gateSignalFired = false;
-  let gateEarlyTap = false;        // 早押し（フライング）判定。合図は予定どおり出す
   let gateSignalTimeout = null;
   let gateFeedbackTimeout = null;
-  let gateProceedTimeout = null;
-  let lastStartLabel = '';         // 結果画面の騎乗メモ用（好スタート/まずまず/出遅れ/フライング）
 
   function openGateScreen() {
     hasSubmitted = false; // reset per-race submission guard
@@ -2325,11 +2318,8 @@
     gateSignalTime = null;
     gateTapHandled = false;
     gateSignalFired = false;
-    gateEarlyTap = false;
-    lastStartLabel = '';
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
-    clearTimeout(gateProceedTimeout);
 
     document.getElementById('gateStatus').style.display = 'block';
     document.getElementById('gateStatus').textContent = '各馬ゲートイン...';
@@ -2357,14 +2347,13 @@
   }
 
   function fireGateSignal() {
-    // 合図は早押しの有無に関わらず必ず予定どおり出す。
-    // レース開始（started=true）はこの関数だけが行う＝早押しでも状態が破綻しない
     gateSignalFired = true;
     gateSignalTime = performance.now();
 
+    // Set race as started (all horses launch on signal)
     raceState.started = true;
-    // 早押し済みならフライングのペナルティ確定。未タップなら出遅れ既定値（タップで上書き）
-    raceState.playerStartDelay = gateEarlyTap ? 0.5 : 1.2;
+    // Default: player missed (1.2s delay), overwritten by tap
+    raceState.playerStartDelay = 1.2;
 
     document.getElementById('gateStatus').style.display = 'none';
     document.getElementById('gateTapHint').style.display = 'none';
@@ -2374,21 +2363,11 @@
     signalEl.style.color = '#ff4444';
     signalEl.style.display = 'block';
 
-    if (gateEarlyTap) {
-      // 判定は保存済み：以降のタップは受け付けず、そのままレースへ
-      gateTapHandled = true;
-      lastStartLabel = 'フライング';
-      showGateFeedback('フライングのぶん出遅れ...', '#ffaa44');
-      proceedToRace();
-      return;
-    }
-
     // Auto-proceed after 1.2s if no tap
     gateSignalTimeout = setTimeout(() => {
       if (!gateTapHandled) {
         gateTapHandled = true;
         raceState.playerStartDelay = 1.2;
-        lastStartLabel = '出遅れ';
         showGateFeedback('出遅れた...', '#ff6666');
         proceedToRace();
       }
@@ -2397,35 +2376,32 @@
 
   function handleGateTap() {
     if (gateTapHandled) return;
+    gateTapHandled = true;
+
+    clearTimeout(gateSignalTimeout);
+
+    let delay, feedback, color;
 
     if (!gateSignalFired) {
-      // 早押し：判定だけ保存し、合図のタイマーはキャンセルしない（合図は予定どおり出る）
-      if (gateEarlyTap) return; // 連打は無視
-      gateEarlyTap = true;
-      showGateFeedback('フライング気味！', '#ffaa44');
-      return;
-    }
-
-    gateTapHandled = true;
-    clearTimeout(gateSignalTimeout); // 合図後の自動進行タイマーのみ解除
-
-    const dt = (performance.now() - gateSignalTime) / 1000;
-    let delay, feedback, color;
-    if (dt <= 0.12) {
-      delay = 0.05;
-      feedback = '好スタート！';
-      color = '#44ffaa';
-      lastStartLabel = '好スタート';
-    } else if (dt <= 0.3) {
-      delay = dt;
-      feedback = 'まずまずのスタート';
-      color = '#ffe066';
-      lastStartLabel = 'まずまず';
+      // Tapped before signal
+      delay = 0.5;
+      feedback = '出遅れ！（フライング気味）';
+      color = '#ffaa44';
     } else {
-      delay = Math.min(dt, 1.2);
-      feedback = '出遅れた...';
-      color = '#ff6666';
-      lastStartLabel = '出遅れ';
+      const dt = (performance.now() - gateSignalTime) / 1000;
+      if (dt <= 0.12) {
+        delay = 0.05;
+        feedback = '好スタート！';
+        color = '#44ffaa';
+      } else if (dt <= 0.3) {
+        delay = dt;
+        feedback = 'まずまずのスタート';
+        color = '#ffe066';
+      } else {
+        delay = Math.min(dt, 1.2);
+        feedback = '出遅れた...';
+        color = '#ff6666';
+      }
     }
 
     raceState.playerStartDelay = delay;
@@ -2445,8 +2421,7 @@
 
   function proceedToRace() {
     // Short delay so feedback is visible, then hide overlay and start race
-    clearTimeout(gateProceedTimeout);
-    gateProceedTimeout = setTimeout(() => {
+    setTimeout(() => {
       showScreen(null); // no overlay
       document.getElementById('hud').style.display = 'block';
       document.getElementById('controls').style.display = 'block';
@@ -2836,14 +2811,11 @@
     // Cancel any pending gate / ceremony timers
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
-    clearTimeout(gateProceedTimeout);
     _clearCeremonyTimers();
     _removeCeremonyTapHandler();
     gateSignalTime = null;
     gateTapHandled = false;
     gateSignalFired = false;
-    gateEarlyTap = false;
-    lastStartLabel = '';
     // Reset weather to sunny default for title screen
     resetWeather();
   }
