@@ -1786,7 +1786,8 @@
     for (let ci = 0; ci < 220; ci++) {
       // Scatter on tier1 top (y=6) and tier2 top (y=11) surfaces
       const onTier2 = ci < 100;
-      const cx = onTier2 ? (-157 + Math.random() * 8) : (-149 + Math.random() * 12);
+      // 客席ボックスの天面範囲に収める（tier1天面: x−160..−148 / tier2天面: x−166..−156）
+      const cx = onTier2 ? (-165 + Math.random() * 8) : (-159 + Math.random() * 10);
       const cy = onTier2 ? 11.3 : 6.3;
       const cz = -205 + Math.random() * 410;
       crowdDummy.position.set(cx, cy, cz);
