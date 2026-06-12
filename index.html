@@ -111,6 +111,19 @@
     }
     .tip { font-size: 12px; color: #888; margin-top: 10px; }
 
+    /* Q5: レース中の音ON/OFFトグル（右上固定。HUDバーは左上なので干渉しない）。
+       表示・非表示は #hud と同じ箇所で JS が切り替える。 */
+    #btnSoundRace {
+      display: none; position: fixed; z-index: 16;
+      right: 10px; top: calc(env(safe-area-inset-top) + 8px);
+      min-width: 44px; min-height: 34px; padding: 8px 12px;
+      font-size: 12px; font-weight: 700; line-height: 1;
+      color: #cde; background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.35); border-radius: 16px;
+      pointer-events: auto; cursor: pointer;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    }
+
     /* ===== COND SCREEN ===== */
     #screenCond {
       background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
@@ -626,6 +639,9 @@
     </div>
   </div>
 
+  <!-- ==== Q5: 音ON/OFF（レース中・右上。#hud と同じ表示制御で出し入れ） ==== -->
+  <button id="btnSoundRace">音ON</button>
+
   <!-- ==== LANE TOAST ==== -->
   <div id="laneToast"></div>
   <div id="goalFlash"></div>
@@ -708,6 +724,7 @@
     <p class="tip" style="font-size:13px;color:#9ab;margin-top:8px;margin-bottom:0;">横持ちプレイ推奨（縦でも遊べます）</p>
     <div class="sub-links">
       <button id="btnShare">ゲームをシェア</button>
+      <button id="btnSound">音ON</button>
       <a href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
   </div>
@@ -959,6 +976,16 @@
     CEREMONY_PHOTO_THRESH: 0.08, // s gap for photo-finish
     CEREMONY_PHOTO_SHOW: 1400,   // ms to show photo-judge text
     FASTFWD_STEPS: 3,    // extra sim steps per frame after player finishes
+
+    // Q5: プロシージャルサウンド音量（すべて 0–1 の gain。masterGain 経由で出力）
+    SND_MASTER: 0.5,     // マスター音量（destination 直前）
+    SND_HOOF: 0.18,      // 蹄音 1 打のピーク
+    SND_GATE: 0.5,       // ゲート開放クラング
+    SND_WHIP: 0.45,      // 鞭のクラック
+    SND_ALERT: 0.3,      // 掛かり警告ビープ
+    SND_TICK: 0.18,      // マイルストーンのティック
+    SND_CROWD: 0.22,     // 歓声スウェルのピーク（最後の直線）
+    SND_GOAL: 0.4,       // ゴール音（着順別アルペジオ）
 
     // Supabase (Phase 5)
     SUPABASE_URL: 'https://mlpnjgezrnhdxsxolyzj.supabase.co',
@@ -2607,12 +2634,14 @@
       updateCamera(raceState);
       if (!playerFinished) updateHUD(raceState);
       updateMiniMap(raceState);
+      updateAudio(raceState, dt); // Q5: 蹄音＋歓声スウェル（内部で音OFF/未初期化をガード）
 
       if (raceState.finishedCount === 12 && !shownResults) {
         shownResults = true;
         // Hide HUD/controls and start ceremony
         document.getElementById('hud').style.display = 'none';
         document.getElementById('controls').style.display = 'none';
+        document.getElementById('btnSoundRace').style.display = 'none'; // Q5: HUDと連動
         showCeremony(raceState);
       }
     } else if (raceState && racePhase === 'gate') {
@@ -2692,6 +2721,7 @@
 
   function triggerGoalFx(state) {
     vibe(30); // Q4: player crosses goal
+    playGoal(state.results.find(r => r.index === state.playerIndex)?.rank); // Q5: 着順別ゴール音
     const flash = document.getElementById('goalFlash');
     flash.classList.add('on');
     goalFxTimers.push(setTimeout(() => flash.classList.remove('on'), 180));
@@ -2776,6 +2806,7 @@
     _milestoneEl.style.fontSize = color === '#ffd700' ? '22px' : '18px';
     _milestoneEl.style.display = 'block';
     _milestoneTimer = setTimeout(() => { _milestoneEl.style.display = 'none'; }, duration);
+    playTick(duration === 1000); // Q5: ティック（最後の直線＝dur1000 は2連）
   }
 
   // Assign dot colors/sizes from horse definitions (called at race start)
@@ -2842,7 +2873,7 @@
     document.getElementById('badgeWall').style.display   = h.isWalled ? 'inline-block' : 'none';
     document.getElementById('badgeKakari').style.display = h.isKakari ? 'inline-block' : 'none';
     // Q4: 掛かり発生時バイブ
-    if (h.isKakari && !_wasKakari) vibe(40);
+    if (h.isKakari && !_wasKakari) { vibe(40); playKakariAlert(); } // Q5: 掛かり警告ビープ
     _wasKakari = h.isKakari;
 
     // 鞭ボタンの使用可否表示（仕様7.2）
@@ -2966,6 +2997,7 @@
         e.preventDefault();
         currentInput.whip = true;
         vibe(15);
+        playWhip(); // Q5: 鞭クラック（simが弾いてもタップで鳴る）
         btnWhip.classList.add('pressed');
         setTimeout(() => btnWhip.classList.remove('pressed'), 120);
       });
@@ -2978,7 +3010,7 @@
       else if (e.key === 'ArrowDown') currentInput.hold = true;
       else if (e.key === 'ArrowLeft' && racePhase === 'running') { currentInput.laneDir = -1; showLaneToast(-1); }
       else if (e.key === 'ArrowRight' && racePhase === 'running') { currentInput.laneDir = 1; showLaneToast(1); }
-      else if (e.key === 'w' || e.key === 'W') { currentInput.whip = true; vibe(15); } // 鞭（ワンショット・ループでクリア）
+      else if (e.key === 'w' || e.key === 'W') { currentInput.whip = true; vibe(15); playWhip(); } // 鞭（ワンショット・ループでクリア）
     });
     window.addEventListener('keyup', e => {
       if (e.key === 'ArrowUp' || e.key === ' ') currentInput.accel = false;
@@ -2986,6 +3018,285 @@
     });
   }
   setupInput();
+
+  // ==== SECTION: AUDIO ====
+  // Q5: プロシージャル Web Audio サウンド。外部音源ファイルは使わず、
+  // すべてオシレータ／ノイズバッファで合成する。THREE/DOM 非依存ではない
+  // （UI トグルやゲームループと連携するため SIM-CORE の外に置く）。
+  // すべてのワンショットは「audioCtx && soundOn」を確認し try/catch で囲み、
+  // 失敗してもゲーム本体を止めない。自動再生がブロックされて初期化が
+  // 走らなくても、ゲームは無音で正常動作する。
+
+  let audioCtx = null;
+  let masterGain = null;
+  let crowdGain = null;        // 歓声ループ専用ゲイン（1度だけ生成）
+  let crowdSrc = null;
+  let _noiseBuffer = null;     // 共有 1s ホワイトノイズ（遅延生成）
+  let soundOn = (localStorage.getItem('johba_sound') !== 'off'); // 既定 ON
+  let _hoofBeatIdx = -1;       // 直近に鳴らした蹄音ビート番号（増分検知用）
+  let _timeSincePlayerFinish = 0; // 歓声フェードアウト用タイマー
+
+  // 共有ノイズバッファ（最初に必要になったとき生成）
+  function getNoiseBuffer() {
+    if (_noiseBuffer) return _noiseBuffer;
+    const len = audioCtx.sampleRate; // 1 秒
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    _noiseBuffer = buf;
+    return buf;
+  }
+
+  // ゲインエンベロープ補助：t0 から attack 秒で peak まで上げ、decay 秒で 0 近傍へ。
+  function env(gainNode, t0, attack, peak, decay) {
+    const g = gainNode.gain;
+    g.setValueAtTime(0.0001, t0);
+    g.linearRampToValueAtTime(peak, t0 + attack);
+    g.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
+  }
+
+  function initAudio() {
+    if (audioCtx) {
+      // 既存コンテキストが suspended（iOS など）なら再開を試みる
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      return;
+    }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = soundOn ? CONFIG.SND_MASTER : 0;
+      masterGain.connect(audioCtx.destination);
+
+      // 歓声ループ（ノイズ→バンドパス→専用ゲイン）を1度だけ構築。gain は 0 から。
+      crowdGain = audioCtx.createGain();
+      crowdGain.gain.value = 0;
+      crowdGain.connect(masterGain);
+      const band = audioCtx.createBiquadFilter();
+      band.type = 'bandpass';
+      band.frequency.value = 800;
+      band.Q.value = 0.6;
+      band.connect(crowdGain);
+      crowdSrc = audioCtx.createBufferSource();
+      crowdSrc.buffer = getNoiseBuffer();
+      crowdSrc.loop = true;
+      crowdSrc.connect(band);
+      crowdSrc.start();
+
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    } catch (_) { audioCtx = null; }
+  }
+
+  function setSound(on) {
+    soundOn = on;
+    try { localStorage.setItem('johba_sound', on ? 'on' : 'off'); } catch (_) {}
+    if (masterGain && audioCtx) {
+      try {
+        const t = audioCtx.currentTime;
+        masterGain.gain.cancelScheduledValues(t);
+        masterGain.gain.setValueAtTime(masterGain.gain.value, t);
+        masterGain.gain.linearRampToValueAtTime(on ? CONFIG.SND_MASTER : 0, t + 0.1);
+      } catch (_) {}
+    }
+    updateSoundButtons();
+  }
+
+  function updateSoundButtons() {
+    const label = soundOn ? '音ON' : '音OFF';
+    const b1 = document.getElementById('btnSound');
+    const b2 = document.getElementById('btnSoundRace');
+    if (b1) b1.textContent = label;
+    if (b2) b2.textContent = label;
+  }
+
+  // ── 個別サウンド（すべてワンショット：ノードを作って start/stop → GC 任せ） ──
+
+  // 蹄音1打：ノイズ→ローパス、短いエンベロープ。speed は m/s。
+  function playHoof(speed) {
+    if (!audioCtx || !soundOn) return;
+    try {
+      const t = audioCtx.currentTime;
+      const src = audioCtx.createBufferSource();
+      src.buffer = getNoiseBuffer();
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 350 + speed * 12;
+      const g = audioCtx.createGain();
+      const peak = CONFIG.SND_HOOF * (0.4 + 0.6 * Math.min(1, speed / 19));
+      env(g, t, 0.004, peak, 0.056);
+      src.connect(lp); lp.connect(g); g.connect(masterGain);
+      src.start(t); src.stop(t + 0.08);
+    } catch (_) {}
+  }
+
+  // ゲート開放クラング：矩形波 220→90Hz + 高域ノイズバースト。
+  function playGate() {
+    if (!audioCtx || !soundOn) return;
+    try {
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(220, t);
+      osc.frequency.exponentialRampToValueAtTime(90, t + 0.12);
+      const og = audioCtx.createGain();
+      env(og, t, 0.004, CONFIG.SND_GATE, 0.12);
+      osc.connect(og); og.connect(masterGain);
+      osc.start(t); osc.stop(t + 0.16);
+
+      const src = audioCtx.createBufferSource();
+      src.buffer = getNoiseBuffer();
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 2000;
+      const ng = audioCtx.createGain();
+      env(ng, t, 0.004, CONFIG.SND_GATE * 0.8, 0.15);
+      src.connect(hp); hp.connect(ng); ng.connect(masterGain);
+      src.start(t); src.stop(t + 0.18);
+    } catch (_) {}
+  }
+
+  // 鞭のクラック：高域ノイズの鋭いバースト + 短いピッチ落ちオシレータ。
+  function playWhip() {
+    if (!audioCtx || !soundOn) return;
+    try {
+      const t = audioCtx.currentTime;
+      const src = audioCtx.createBufferSource();
+      src.buffer = getNoiseBuffer();
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 2500;
+      const ng = audioCtx.createGain();
+      env(ng, t, 0.002, CONFIG.SND_WHIP, 0.05);
+      src.connect(hp); hp.connect(ng); ng.connect(masterGain);
+      src.start(t); src.stop(t + 0.08);
+
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(900, t);
+      osc.frequency.exponentialRampToValueAtTime(500, t + 0.06);
+      const og = audioCtx.createGain();
+      env(og, t, 0.002, CONFIG.SND_WHIP * 0.5, 0.06);
+      osc.connect(og); og.connect(masterGain);
+      osc.start(t); osc.stop(t + 0.09);
+    } catch (_) {}
+  }
+
+  // 掛かり警告：三角波 880Hz→988Hz の短い2連ビープ。
+  function playKakariAlert() {
+    if (!audioCtx || !soundOn) return;
+    try {
+      const t = audioCtx.currentTime;
+      [[880, 0], [988, 0.1]].forEach(([freq, off]) => {
+        const t0 = t + off;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const g = audioCtx.createGain();
+        env(g, t0, 0.006, CONFIG.SND_ALERT, 0.084);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(t0); osc.stop(t0 + 0.12);
+      });
+    } catch (_) {}
+  }
+
+  // マイルストーンのティック：サイン 1320Hz。最後の直線（dur===1000）は 1320→1760 の2連。
+  function playTick(isFinal) {
+    if (!audioCtx || !soundOn) return;
+    try {
+      const t = audioCtx.currentTime;
+      const notes = isFinal ? [[1320, 0], [1760, 0.09]] : [[1320, 0]];
+      notes.forEach(([freq, off]) => {
+        const t0 = t + off;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const g = audioCtx.createGain();
+        env(g, t0, 0.004, CONFIG.SND_TICK, 0.066);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(t0); osc.stop(t0 + 0.09);
+      });
+    } catch (_) {}
+  }
+
+  // ゴール音：1着＝上昇トライアド、2–3着＝2音、その他＝単音。
+  function playGoal(rank) {
+    if (!audioCtx || !soundOn) return;
+    try {
+      const t = audioCtx.currentTime;
+      let notes;
+      if (rank === 1)            notes = [523, 659, 784];
+      else if (rank === 2 || rank === 3) notes = [523, 659];
+      else                       notes = [392];
+      const single = notes.length === 1;
+      notes.forEach((freq, i) => {
+        const t0 = t + i * 0.09;
+        const dur = single ? 0.2 : 0.12;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const g = audioCtx.createGain();
+        env(g, t0, 0.006, CONFIG.SND_GOAL, dur);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(t0); osc.stop(t0 + dur + 0.05);
+      });
+    } catch (_) {}
+  }
+
+  // 毎フレーム：プレイヤー馬の蹄音発火 + 歓声スウェルの追従。
+  // raceState が null でも安全（呼び出し側は running 中のみ呼ぶが念のためガード）。
+  function updateAudio(state, dt) {
+    if (!audioCtx || !soundOn || !state) return;
+    try {
+      const h = state.horses[state.playerIndex];
+
+      // 完走後経過時間（歓声フェードアウト用）
+      if (playerFinished) _timeSincePlayerFinish += dt;
+
+      // ── 蹄音：legPhase の 1 ストライドを 4 ビートに分割し、ビート番号が
+      // 増えたら 1 打鳴らす（最大 ~9打/秒）。停止・低速・非表示時はスキップ。
+      if (!document.hidden && !h.finished && h.speed >= 2) {
+        const beat = Math.floor(h.legPhase / (Math.PI * 2) * 4);
+        if (beat !== _hoofBeatIdx) {
+          // 一気に複数ビート跨いでも1打だけ（タブ復帰直後の連打防止）
+          _hoofBeatIdx = beat;
+          playHoof(h.speed);
+        }
+      }
+
+      // ── 歓声スウェル：残り距離が近いほど大きく。target を毎フレーム平滑追従。
+      if (crowdGain) {
+        const remaining = state.cond.distance - h.progress;
+        let target;
+        if (playerFinished) {
+          target = 0.18 * Math.max(0, 1 - _timeSincePlayerFinish / 2);
+        } else if (remaining < 400) {
+          target = CONFIG.SND_CROWD * (1 - (remaining / 400) * 0.7);
+        } else if (racePhase === 'running') {
+          target = 0.035;
+        } else {
+          target = 0;
+        }
+        crowdGain.gain.value += (target - crowdGain.gain.value) * 0.05;
+      }
+    } catch (_) {}
+  }
+
+  // ページ可視性：非表示で suspend、復帰で（音 ON なら）resume。iOS/省電力対策。
+  document.addEventListener('visibilitychange', () => {
+    if (!audioCtx) return;
+    try {
+      if (document.hidden) audioCtx.suspend();
+      else if (soundOn) audioCtx.resume();
+    } catch (_) {}
+  });
+
+  // 起動時にトグルのラベルを現在状態へ合わせる
+  updateSoundButtons();
+  const _btnSoundTitle = document.getElementById('btnSound');
+  if (_btnSoundTitle) _btnSoundTitle.addEventListener('click', () => setSound(!soundOn));
+  const _btnSoundRace = document.getElementById('btnSoundRace');
+  if (_btnSoundRace) _btnSoundRace.addEventListener('click', () => setSound(!soundOn));
 
   // ==== SECTION: UI-SCREENS ====
 
@@ -3121,6 +3432,7 @@
   });
 
   document.getElementById('btnStart').addEventListener('click', () => {
+    if (!audioCtx) initAudio(); // Q5: 最初のユーザー操作で AudioContext を作成（自動再生制限対策）
     const inp = document.getElementById('playerName');
     const name = inp.value.trim();
     if (!name) {
@@ -3497,6 +3809,9 @@
     // Q4: reset band/vibe/milestone/hint caches
     _lastStaminaBand = -1;
     _wasKakari = false;
+    // Q5: per-race audio state reset (蹄音ビート・完走タイマー)
+    _hoofBeatIdx = -1;
+    _timeSincePlayerFinish = 0;
     _milestonesCrossed = new Set();
     clearTimeout(_milestoneTimer);
     _milestoneTimer = null;
@@ -3526,6 +3841,7 @@
     showScreen('screenGate');
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
+    document.getElementById('btnSoundRace').style.display = 'none'; // Q5: HUDと連動
 
     // After 0.8s → show tap hint
     gateSignalTimeout = setTimeout(() => {
@@ -3546,6 +3862,7 @@
     // レース開始（started=true）はこの関数だけが行う＝早押しでも状態が破綻しない
     gateSignalFired = true;
     gateSignalTime = performance.now();
+    playGate(); // Q5: ゲート開放クラング
 
     raceState.started = true;
     // 早押し済みならフライングのペナルティ確定。未タップなら出遅れ既定値（タップで上書き）
@@ -3581,6 +3898,8 @@
   }
 
   function handleGateTap() {
+    if (!audioCtx) initAudio(); // Q5: ゲートタップでも AudioContext を確保（iOS など）
+    else if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
     if (gateTapHandled) return;
 
     if (!gateSignalFired) {
@@ -3652,6 +3971,7 @@
       showScreen(null); // no overlay
       document.getElementById('hud').style.display = 'block';
       document.getElementById('controls').style.display = 'block';
+      document.getElementById('btnSoundRace').style.display = 'block'; // Q5: HUDと連動
       racePhase = 'running';
       _gateHideTimer = 1.5; // start 1.5s countdown to hide side panels/tops
       showFirstHintIfNeeded(); // Q4
@@ -4052,6 +4372,7 @@
 
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
+    document.getElementById('btnSoundRace').style.display = 'none'; // Q5: HUDと連動
     // Clear previous ranking display before showing screen
     document.getElementById('submitStatus').textContent = '';
     document.getElementById('rankingBox').textContent = '';
@@ -4152,6 +4473,19 @@
     _firstHintTimer = null;
     const hintElReset = document.getElementById('firstHint');
     if (hintElReset) hintElReset.style.display = 'none';
+    // Q5: レース中トグルを隠し、歓声ループを即座に絞り、タイマー類をリセット
+    const btnSoundRaceEl = document.getElementById('btnSoundRace');
+    if (btnSoundRaceEl) btnSoundRaceEl.style.display = 'none';
+    if (crowdGain && audioCtx) {
+      try {
+        const t = audioCtx.currentTime;
+        crowdGain.gain.cancelScheduledValues(t);
+        crowdGain.gain.setValueAtTime(crowdGain.gain.value, t);
+        crowdGain.gain.linearRampToValueAtTime(0, t + 0.2);
+      } catch (_) {}
+    }
+    _timeSincePlayerFinish = 0;
+    _hoofBeatIdx = -1;
   }
 
   // Q4: スプラッシュ削除（Three.js CDNロード完了後）
