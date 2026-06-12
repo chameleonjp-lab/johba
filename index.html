@@ -314,11 +314,34 @@
     #resultRecap {
       font-size: 13px; color: #888; margin-bottom: 6px;
     }
+    #resultTitle {
+      font-size: 14px; font-weight: 700; color: #ffe066;
+      border: 1px solid #ffe066; border-radius: 999px;
+      padding: 4px 14px; margin-bottom: 8px;
+      display: inline-block;
+    }
     #resultComment {
-      font-size: 13px; color: #aaddff; margin-bottom: 14px;
+      font-size: 13px; color: #aaddff; margin-bottom: 10px;
       line-height: 1.6; max-width: 320px; text-align: center;
       padding: 8px 12px; background: rgba(68,170,255,0.08);
       border-radius: 8px; border: 1px solid rgba(68,170,255,0.2);
+    }
+    #ridingMemo {
+      width: 100%; max-width: 360px; margin-bottom: 16px;
+    }
+    #ridingMemo .memo-header {
+      font-size: 12px; font-weight: 700; color: #88aacc;
+      margin-bottom: 6px; letter-spacing: 0.5px;
+    }
+    #ridingMemo .memo-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+    }
+    #ridingMemo .memo-cell {
+      font-size: 12px; color: #ccc;
+    }
+    #ridingMemo .memo-cell .memo-val {
+      color: #fff; font-weight: 600;
     }
 
     /* ===== NAME INPUT (title screen) ===== */
@@ -689,7 +712,12 @@
     <div id="resultHorse"></div>
     <div id="resultTime"></div>
     <div id="resultScore"></div>
+    <div id="resultTitle"></div>
     <div id="resultComment"></div>
+    <div id="ridingMemo">
+      <div class="memo-header">今回の騎乗メモ</div>
+      <div class="memo-grid" id="ridingMemoGrid"></div>
+    </div>
     <div id="finishOrderList"></div>
     <div id="rankingSection">
       <h3>ランキング（ベストスコア）</h3>
@@ -697,7 +725,8 @@
       <div id="rankingBox"></div>
     </div>
     <div id="resultBtns">
-      <button id="btnRetry" class="btn-primary">もう一度走る</button>
+      <button id="btnRetrySame" class="btn-secondary">同じ条件でもう一度</button>
+      <button id="btnRetry" class="btn-primary">新しいレースへ</button>
       <button id="btnShare2" class="btn-secondary">結果をシェア</button>
       <button id="btnToTitle" class="btn-secondary">タイトルへ</button>
       <a id="btnToLab" class="btn-tertiary" href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
@@ -2541,9 +2570,12 @@
   let gateFeedbackTimeout = null;
   let gateProceedTimeout = null;
   let lastStartLabel = '';         // 結果画面の騎乗メモ用（好スタート/まずまず/出遅れ/フライング）
+  let lastRaceSetup = null;        // 同じ条件でもう一度：スナップショット { cond, field, playerIdx }
 
   function openGateScreen() {
     hasSubmitted = false; // reset per-race submission guard
+    // スナップショット：同じ条件でもう一度ボタン用（resetAllより前に保存すること）
+    lastRaceSetup = { cond: pending.cond, field: pending.field, playerIdx };
     const { cond, field } = pending;
 
     // Apply weather/going visuals for this race
@@ -2979,6 +3011,34 @@
     }
   }
 
+  // ── 結果称号 ──
+  function generateResultTitle(state, rank) {
+    const ps = state.playerStats;
+    const playerDef = state.field[state.playerIndex];
+    // 優先順位：先にマッチしたものを返す
+    if (rank === 1 && lastStartLabel === '好スタート')
+      return '好発進の名騎手';
+    if (rank === 1 && ps.staminaAtFinish !== null && ps.staminaAtFinish < 0.08)
+      return '絞り切り勝利';
+    if (rank === 1)
+      return '本日の主役';
+    if (playerDef.style === 'oikomi' && rank <= 3)
+      return '豪脚一閃';
+    if (ps.blockedTime > 4)
+      return '前壁地獄';
+    if (ps.kakariTime > 5)
+      return '暴れ馬に振り回された';
+    if (ps.staminaAtFinish !== null && ps.staminaAtFinish > 0.35 && rank >= 4)
+      return '脚を余した騎乗';
+    if (lastStartLabel === 'フライング')
+      return '気が早い騎手';
+    if (rank <= 3)
+      return '馬券圏内の堅実派';
+    if (rank >= 10)
+      return '次走に期待';
+    return '研鑽の一戦';
+  }
+
   // ── Finish/result screen ──
   function showFinishScreen(state) {
     _clearCeremonyTimers();
@@ -3007,9 +3067,36 @@
     document.getElementById('resultTime' ).textContent = `走破タイム：${time.toFixed(2)}s`;
     document.getElementById('resultScore').textContent = `スコア：${score}点（着順${rankPts} + タイム${timeBonus}）`;
 
+    // 結果称号
+    const title = generateResultTitle(state, rank);
+    document.getElementById('resultTitle').textContent = `称号「${title}」`;
+
     // 講評
     document.getElementById('resultComment').textContent =
       `講評：「${generateComment(state, rank)}」`;
+
+    // 騎乗メモ
+    const ps = state.playerStats;
+    const memoItems = [
+      ['スタート', lastStartLabel || '--'],
+      ['掛かり', ps.kakariTime > 0 ? ps.kakariTime.toFixed(1) + '秒' : 'なし'],
+      ['前が壁', ps.blockedTime > 0.05 ? ps.blockedTime.toFixed(1) + '秒' : 'なし'],
+      ['鞭', ps.whipCount + '回'],
+      ['仕掛け', ps.spurtRemain !== null ? '残り' + Math.round(ps.spurtRemain) + 'm' : 'なし'],
+      ['残スタミナ', ps.staminaAtFinish !== null ? Math.round(ps.staminaAtFinish * 100) + '%' : '--'],
+    ];
+    const gridEl = document.getElementById('ridingMemoGrid');
+    gridEl.innerHTML = '';
+    memoItems.forEach(([label, val]) => {
+      const cell = document.createElement('div');
+      cell.className = 'memo-cell';
+      cell.textContent = label + '：';
+      const valSpan = document.createElement('span');
+      valSpan.className = 'memo-val';
+      valSpan.textContent = val;
+      cell.appendChild(valSpan);
+      gridEl.appendChild(cell);
+    });
 
     // Full finish order list
     const listEl = document.getElementById('finishOrderList');
@@ -3032,7 +3119,7 @@
 
     // Store result data for share button
     document.getElementById('btnShare2').dataset.shareText =
-      `ジョーバで${state.cond.distance}m${rankLabels[rank] ?? rank+'着'}！スコア${score}点 #ジョーバ`;
+      `ジョーバ ${state.cond.distance}m ${rankLabels[rank] ?? rank + '着'}！スコア${score}点 称号「${title}」 #ジョーバ`;
 
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
@@ -3059,6 +3146,21 @@
         setTimeout(() => { btn.textContent = orig; }, 1800);
       }
     } catch (_) {}
+  });
+
+  document.getElementById('btnRetrySame').addEventListener('click', () => {
+    const snap = lastRaceSetup;
+    if (!snap || !snap.cond || !snap.field) {
+      // fallback: 新しいレースへ
+      resetAll();
+      goToCondScreen();
+      return;
+    }
+    resetAll();
+    // resetAll の後に pending / playerIdx を復元（lastRaceSetup は resetAll で消えない）
+    pending = { cond: snap.cond, field: snap.field };
+    playerIdx = snap.playerIdx;
+    openGateScreen();
   });
 
   document.getElementById('btnRetry').addEventListener('click', () => {

@@ -77,3 +77,10 @@
 - Task5 作戦メモ強化：showLotteryReveal内でadvisesを最大5条件で評価し先頭2件だけ選択。hint-boxをinnerHTMLでビルドし「作戦メモ」ヘッダー+脚質ヒント+アドバイス箇条書き構成に変更
 - Task6 進路フィードバック：canChangeLane(dir)はstepRaceのlane change条件と同ロジック（LANE_CHANGE_BLOCKとlaneF距離<0.8）。符号確認：swipe右(dx>0)→laneDir+1→targetLane増加→外へ。showLaneToast(dir)を各入力イベントのlaneDir設定直後に呼ぶ。laneToastTimerは1本を使い回し。resetAllでクリア・非表示化
 - Task7 UI調整：tipを「横持ちプレイ推奨（縦でも遊べます）」に変更しtitle-btnsの直下に移動。ルール説明モーダル冒頭に「まずはこれだけ」ボックス（rgba(68,170,255,0.1)背景・角丸）を追加。スクロール領域（#entriesList/#screenResult/.modal-box/#ceremonyRows/#screenTitle/#screenLottery）にtouch-action:pan-yを追加
+
+### UI/UX改善ラウンド（その2）
+
+- 称号の優先順位：好スタート1着 → スタミナ絞り切り1着 → 1着（汎用） → 追込馬3着内 → 前壁地獄（>4秒）→ 掛かり暴走（>5秒）→ 脚余し（スタミナ>35%＋4着以下）→ フライング → 馬券圏内（2-3着）→ 10着以下（次走に期待）→ デフォルト（研鑽の一戦）。11パターンで全パスを網羅
+- 同じ条件でもう一度の実装方式：スナップショット（lastRaceSetup = { cond, field, playerIdx }）をopenGateScreen冒頭で保存する方式。resetAll後に pending と playerIdx を snap から復元してopenGateScreenを呼ぶ。lastRaceSetupはresetAllに含まれないため復元まで保持される。フィールド定義（field配列）はレース中に変異しないため参照共有で安全（ランタイム状態はraceState側に独立）
+- シェア文の形式：「ジョーバ ${distance}m ${rank}着！スコア${score}点 称号「${title}」 #ジョーバ」に統一。URL付与・navigator.share→clipboardフォールバックの仕組みは変更なし
+- btnRetrySameのfallback：snapがnull（ゲート未到達の場合）はresetAll後にgoToCondScreenを呼ぶ（btnRetryと同じ挙動）
