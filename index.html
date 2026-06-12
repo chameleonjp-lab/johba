@@ -1585,27 +1585,59 @@
 
   // ── Course geometry ──
   function buildCourse() {
+    // ── Task 2: 地面ノイズテクスチャ ──
+    // 256×256 canvas: base #3a7d44 + ~1500 random 2-3px speckles ±10% lightness
+    const gndCanvas = document.createElement('canvas');
+    gndCanvas.width = 256; gndCanvas.height = 256;
+    const gndCtx = gndCanvas.getContext('2d');
+    gndCtx.fillStyle = '#3a7d44';
+    gndCtx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 1500; i++) {
+      const bright = Math.random() < 0.5;
+      const lum = bright ? Math.floor(Math.random() * 26) : -Math.floor(Math.random() * 26);
+      // Parse #3a7d44 components: r=58,g=125,b=68
+      const r = Math.max(0, Math.min(255, 58  + lum));
+      const g = Math.max(0, Math.min(255, 125 + lum));
+      const b = Math.max(0, Math.min(255, 68  + lum));
+      const sz = 2 + Math.floor(Math.random() * 2);
+      gndCtx.fillStyle = `rgb(${r},${g},${b})`;
+      gndCtx.fillRect(Math.random() * 256, Math.random() * 256, sz, sz);
+    }
+    const groundTex = new THREE.CanvasTexture(gndCanvas);
+    groundTex.wrapS = THREE.RepeatWrapping;
+    groundTex.wrapT = THREE.RepeatWrapping;
+    groundTex.repeat.set(30, 30);
+
     // Ground plane
     const groundGeo = new THREE.PlaneGeometry(800, 800);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44 });
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44, map: groundTex });
+    groundMat.needsUpdate = true;
     envRefs.groundMat = groundMat;
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.05;
     scene.add(ground);
 
-    // Track strip (ring following the path), built as a BufferGeometry of quads
+    // ── Track strip with Task 1: 芝縞刈り vertex colors ──
+    // Alternate two brightness levels every ~25m of course length
     const SEG = 160;
     const positions = [];
     const indices = [];
+    const vcols = []; // vertex colors
     const innerLane = -0.5;
     const outerLane = CONFIG.LANE_COUNT - 0.5;
     for (let k = 0; k <= SEG; k++) {
       const p = (k / SEG) * CONFIG.LAP_LEN;
+      const stripeIdx = Math.floor(p / 25) % 2;
+      const bright = stripeIdx === 0 ? 1.0 : 0.90;
+      const brightG = stripeIdx === 0 ? 1.0 : 0.93;
+      const brightB = stripeIdx === 0 ? 1.0 : 0.90;
       const [ix, , iz] = worldPos(p, innerLane);
       const [ox, , oz] = worldPos(p, outerLane);
       positions.push(ix, 0, iz);
+      vcols.push(bright, brightG, brightB);
       positions.push(ox, 0, oz);
+      vcols.push(bright, brightG, brightB);
     }
     for (let k = 0; k < SEG; k++) {
       const a = k * 2, b = k * 2 + 1, c = k * 2 + 2, d = k * 2 + 3;
@@ -1614,9 +1646,12 @@
     }
     const trackGeo = new THREE.BufferGeometry();
     trackGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    trackGeo.setAttribute('color', new THREE.Float32BufferAttribute(vcols, 3));
     trackGeo.setIndex(indices);
     trackGeo.computeVertexNormals();
-    const trackMat = new THREE.MeshLambertMaterial({ color: 0xc8a86b, side: THREE.DoubleSide });
+    // vertexColors: true — material.color acts as a multiplier on the per-vertex colors.
+    // applyWeather lerps material.color only, so the stripe pattern is preserved.
+    const trackMat = new THREE.MeshLambertMaterial({ color: 0xc8a86b, side: THREE.DoubleSide, vertexColors: true });
     envRefs.trackMat = trackMat;
     const track = new THREE.Mesh(trackGeo, trackMat);
     scene.add(track);
@@ -1644,6 +1679,40 @@
     railPosts.instanceMatrix.needsUpdate = true;
     scene.add(railPosts);
 
+    // ── Task 6: 内ラチ横棒 (rail bars) ──
+    // For each consecutive post pair: horizontal bar at y 1.05, length = chord distance
+    const barGeo = new THREE.BoxGeometry(0.06, 0.06, 1);
+    const barMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const railBars = new THREE.InstancedMesh(barGeo, barMat, postCount * 2);
+    let barInst = 0;
+    for (let k = 0; k < postCount; k++) {
+      const p0 = k * postSpacing;
+      const p1 = ((k + 1) % postCount) * postSpacing;
+      // Inner lane
+      const [ix0, , iz0] = worldPos(p0, -0.5);
+      const [ix1, , iz1] = worldPos(p1, -0.5);
+      const idx = ix1 - ix0, idz = iz1 - iz0;
+      const iLen = Math.sqrt(idx * idx + idz * idz);
+      dummy.position.set((ix0 + ix1) / 2, 1.05, (iz0 + iz1) / 2);
+      dummy.rotation.set(0, Math.atan2(idx, idz), 0);
+      dummy.scale.set(1, 1, iLen);
+      dummy.updateMatrix();
+      railBars.setMatrixAt(barInst++, dummy.matrix);
+      // Outer lane
+      const [ox0, , oz0] = worldPos(p0, CONFIG.LANE_COUNT + 0.5);
+      const [ox1, , oz1] = worldPos(p1, CONFIG.LANE_COUNT + 0.5);
+      const odx = ox1 - ox0, odz = oz1 - oz0;
+      const oLen = Math.sqrt(odx * odx + odz * odz);
+      dummy.position.set((ox0 + ox1) / 2, 1.05, (oz0 + oz1) / 2);
+      dummy.rotation.set(0, Math.atan2(odx, odz), 0);
+      dummy.scale.set(1, 1, oLen);
+      dummy.updateMatrix();
+      railBars.setMatrixAt(barInst++, dummy.matrix);
+    }
+    dummy.scale.set(1, 1, 1); // reset scale on shared dummy
+    railBars.instanceMatrix.needsUpdate = true;
+    scene.add(railBars);
+
     // ゴール板（コース固定位置 GOAL_S。ホームストレッチ上なので向きはx軸沿いでよい）
     const finishGeo = new THREE.PlaneGeometry(CONFIG.LANE_COUNT * CONFIG.LANE_WIDTH + 2, 1.5);
     const finishMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
@@ -1661,7 +1730,8 @@
     goalPost.position.set(gx, 1.75, gz);
     scene.add(goalPost);
 
-    // ハロン棒：ゴールから200mごとの残距離標識（コース固定）
+    // ── Task 6: ハロン棒の数字板 ──
+    // Original post + 64×48 canvas board with distance text
     const halonGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
     const halonMat = new THREE.MeshLambertMaterial({ color: 0xff5050 });
     for (let k = 1; k <= 7; k++) {
@@ -1670,9 +1740,282 @@
       const [hx, , hz] = worldPos(p, CONFIG.LANE_COUNT + 1.2);
       halon.position.set(hx, 1, hz);
       scene.add(halon);
+      // Canvas board
+      const hc = document.createElement('canvas');
+      hc.width = 64; hc.height = 48;
+      const hctx = hc.getContext('2d');
+      hctx.fillStyle = '#1a5c2a';
+      hctx.fillRect(0, 0, 64, 48);
+      hctx.fillStyle = '#ffffff';
+      hctx.font = 'bold 22px sans-serif';
+      hctx.textAlign = 'center';
+      hctx.textBaseline = 'middle';
+      hctx.fillText(`${k * 200}`, 32, 26);
+      const halonTex = new THREE.CanvasTexture(hc);
+      const halonBoard = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.5, 1.1),
+        new THREE.MeshBasicMaterial({ map: halonTex, side: THREE.DoubleSide })
+      );
+      halonBoard.position.set(hx, 2.7, hz);
+      scene.add(halonBoard);
+    }
+
+    // ── Task 4: 観客スタンド（home straight outside = x NEGATIVE side） ──
+    const standMat1 = new THREE.MeshLambertMaterial({ color: 0x9aa0a8 });
+    const standMat2 = new THREE.MeshLambertMaterial({ color: 0x7a8088 });
+    const roofMat   = new THREE.MeshLambertMaterial({ color: 0x3a3e45 });
+    // Tier 1: 12×6×420 centered at x=-154, y=3
+    const tier1 = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 420), standMat1);
+    tier1.position.set(-154, 3, 0);
+    scene.add(tier1);
+    // Tier 2: 10×6×420 centered at x=-161, y=8
+    const tier2 = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 420), standMat2);
+    tier2.position.set(-161, 8, 0);
+    scene.add(tier2);
+    // Roof atop tier2: thin dark box
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(12, 0.5, 422), roofMat);
+    roof.position.set(-162, 11.25, 0);
+    scene.add(roof);
+    // Crowd instances scattered on tier tops
+    const crowdGeo = new THREE.BoxGeometry(0.4, 0.5, 0.4);
+    const crowdMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const crowdMesh = new THREE.InstancedMesh(crowdGeo, crowdMat, 220);
+    crowdMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(220 * 3), 3);
+    const crowdDummy = new THREE.Object3D();
+    const crowdColor = new THREE.Color();
+    for (let ci = 0; ci < 220; ci++) {
+      // Scatter on tier1 top (y=6) and tier2 top (y=11) surfaces
+      const onTier2 = ci < 100;
+      const cx = onTier2 ? (-157 + Math.random() * 8) : (-149 + Math.random() * 12);
+      const cy = onTier2 ? 11.3 : 6.3;
+      const cz = -205 + Math.random() * 410;
+      crowdDummy.position.set(cx, cy, cz);
+      crowdDummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      crowdDummy.updateMatrix();
+      crowdMesh.setMatrixAt(ci, crowdDummy.matrix);
+      crowdColor.setHSL(Math.random(), 0.4 + 0.3 * Math.random(), 0.45 + 0.25 * Math.random());
+      crowdMesh.setColorAt(ci, crowdColor);
+    }
+    crowdMesh.instanceMatrix.needsUpdate = true;
+    crowdMesh.instanceColor.needsUpdate = true;
+    scene.add(crowdMesh);
+
+    // ── Task 5: 遠景 ──
+
+    // Window texture for buildings: 128×128, dark blue-gray + lit windows
+    const winCanvas = document.createElement('canvas');
+    winCanvas.width = 128; winCanvas.height = 128;
+    const winCtx = winCanvas.getContext('2d');
+    winCtx.fillStyle = '#2a3040';
+    winCtx.fillRect(0, 0, 128, 128);
+    // 6×8 grid of windows, ~40% lit
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 6; col++) {
+        const lit = Math.random() < 0.4;
+        winCtx.fillStyle = lit ? '#ffe9a0' : '#1a2030';
+        winCtx.fillRect(8 + col * 18, 8 + row * 14, 12, 9);
+      }
+    }
+    const winTex = new THREE.CanvasTexture(winCanvas);
+    const winMat = new THREE.MeshLambertMaterial({ map: winTex });
+
+    // Buildings: InstancedMesh, scale per-instance for footprint/height
+    const bldGeo = new THREE.BoxGeometry(1, 1, 1);
+    const bldMesh = new THREE.InstancedMesh(bldGeo, winMat, 10);
+    const bldDummy = new THREE.Object3D();
+    // Place backstretch outside and beyond corners
+    const bldPositions = [
+      [+220, -180], [+240, -60], [+200, +60], [+230, +170],
+      [+200, -100], [+260, +20],
+      // beyond corners
+      [-30, -290], [+40, -310], [-50, +295], [+30, +315],
+    ];
+    for (let bi = 0; bi < bldPositions.length; bi++) {
+      const [bx, bz] = bldPositions[bi];
+      const footprint = 18 + Math.random() * 12;
+      const height    = 30 + Math.random() * 40;
+      bldDummy.position.set(bx, height / 2, bz);
+      bldDummy.rotation.set(0, 0, 0);
+      bldDummy.scale.set(footprint, height, footprint);
+      bldDummy.updateMatrix();
+      bldMesh.setMatrixAt(bi, bldDummy.matrix);
+    }
+    bldDummy.scale.set(1, 1, 1);
+    bldMesh.instanceMatrix.needsUpdate = true;
+    scene.add(bldMesh);
+
+    // Trees: cones + trunks (44 pairs, 8 in infield)
+    const treeGreenMat  = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
+    const treeBrownMat  = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
+    const coneGeo  = new THREE.ConeGeometry(2.2, 5, 6);
+    const trunkGeo = new THREE.CylinderGeometry(0.35, 0.45, 2.4, 5);
+    const treeCones  = new THREE.InstancedMesh(coneGeo,  treeGreenMat, 44);
+    const treeTrunks = new THREE.InstancedMesh(trunkGeo, treeBrownMat, 44);
+    const treeDummy = new THREE.Object3D();
+    let treeIdx = 0;
+    // 8 infield trees
+    for (let ti = 0; ti < 8; ti++) {
+      const tx = (Math.random() - 0.5) * 120;
+      const tz = (Math.random() - 0.5) * 160;
+      treeDummy.position.set(tx, 3.7, tz);
+      treeDummy.rotation.set(0, 0, 0);
+      treeDummy.scale.set(1, 1, 1);
+      treeDummy.updateMatrix();
+      treeCones.setMatrixAt(treeIdx, treeDummy.matrix);
+      treeDummy.position.set(tx, 1.2, tz);
+      treeDummy.updateMatrix();
+      treeTrunks.setMatrixAt(treeIdx, treeDummy.matrix);
+      treeIdx++;
+    }
+    // 36 outside the oval, excluding stand strip
+    let attempts = 0;
+    while (treeIdx < 44 && attempts < 2000) {
+      attempts++;
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 150 + Math.random() * 50;
+      const tx = Math.cos(ang) * dist;
+      const tz = Math.sin(ang) * dist;
+      // Exclude stand strip: x < -145 and |z| < 220
+      if (tx < -145 && Math.abs(tz) < 220) continue;
+      treeDummy.position.set(tx, 3.7, tz);
+      treeDummy.rotation.set(0, 0, 0);
+      treeDummy.scale.set(1, 1, 1);
+      treeDummy.updateMatrix();
+      treeCones.setMatrixAt(treeIdx, treeDummy.matrix);
+      treeDummy.position.set(tx, 1.2, tz);
+      treeDummy.updateMatrix();
+      treeTrunks.setMatrixAt(treeIdx, treeDummy.matrix);
+      treeIdx++;
+    }
+    treeCones.instanceMatrix.needsUpdate = true;
+    treeTrunks.instanceMatrix.needsUpdate = true;
+    scene.add(treeCones);
+    scene.add(treeTrunks);
+
+    // Clouds: 5 planes with radial-gradient canvas texture
+    const cloudCanvas = document.createElement('canvas');
+    cloudCanvas.width = 64; cloudCanvas.height = 64;
+    const cCtx = cloudCanvas.getContext('2d');
+    const cGrad = cCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    cGrad.addColorStop(0,   'rgba(255,255,255,1)');
+    cGrad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+    cGrad.addColorStop(1,   'rgba(255,255,255,0)');
+    cCtx.fillStyle = cGrad;
+    cCtx.fillRect(0, 0, 64, 64);
+    const cloudTex = new THREE.CanvasTexture(cloudCanvas);
+    const cloudMat = new THREE.MeshBasicMaterial({ map: cloudTex, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
+    const cloudPositions = [
+      [-200, 100, 0],
+      [300, 120, -80],
+      [-100, 90, 300],
+      [260, 130, 200],
+      [0, 110, -340],
+    ];
+    for (const [cpx, cpy, cpz] of cloudPositions) {
+      const cloudMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 24), cloudMat);
+      cloudMesh.position.set(cpx, cpy, cpz);
+      // Face the origin (rotate around Y then tilt slightly)
+      cloudMesh.lookAt(0, cpy, 0);
+      scene.add(cloudMesh);
     }
   }
   buildCourse();
+
+  // ── Task 3: スターティングゲート ──
+  // Gate geometry constants (Q2)
+  const _GATE_LANE_COUNT = CONFIG.LANE_COUNT; // 12
+  // InstancedMeshes for gate parts (built once at startup, repositioned per race)
+  const gateSideMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+  const gateTopMat  = new THREE.MeshLambertMaterial({ color: 0xbbbbbb });
+  const gateDoorMat = new THREE.MeshLambertMaterial({ color: 0xd8e8d8 });
+  // 2 sides per stall × 12 stalls = 24 instances
+  const gateSides = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 2.3, 1.6), gateSideMat, 24);
+  // 1 top per stall × 12 stalls = 12 instances
+  const gateTops  = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0,  0.25, 1.6), gateTopMat,  12);
+  // 1 door per stall × 12 stalls = 12 instances
+  const gateDoors = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 0.06), gateDoorMat, 12);
+  gateSides.visible = false;
+  gateTops.visible  = false;
+  gateDoors.visible = false;
+  scene.add(gateSides);
+  scene.add(gateTops);
+  scene.add(gateDoors);
+
+  // Per-door base position and heading angle, stored for animation
+  const _gateDoorBasePos = []; // Array of THREE.Vector3
+  const _gateDoorLatDir  = []; // Array of THREE.Vector3 (lateral unit)
+  const _gateDoorTheta   = []; // Array of Number (heading angle)
+  for (let i = 0; i < _GATE_LANE_COUNT; i++) {
+    _gateDoorBasePos.push(new THREE.Vector3());
+    _gateDoorLatDir.push(new THREE.Vector3());
+    _gateDoorTheta.push(0);
+  }
+
+  // Shared dummy for gate matrix computation
+  const _gateDummy = new THREE.Object3D();
+
+  // positionGate(startS): compute gate stall positions from course geometry
+  function positionGate(startS) {
+    for (let i = 0; i < _GATE_LANE_COUNT; i++) {
+      const [bx, , bz] = worldPos(startS, i);
+      // Lateral unit: numerical derivative across lane
+      const [px, , pz] = worldPos(startS, i + 0.5);
+      const [qx, , qz] = worldPos(startS, i - 0.5);
+      const ldx = px - qx, ldz = pz - qz;
+      const llen = Math.sqrt(ldx * ldx + ldz * ldz) || 1;
+      const latX = ldx / llen, latZ = ldz / llen;
+
+      // Forward unit from heading angle
+      const theta = headingAngle(startS);
+      const fwdX = Math.sin(theta), fwdZ = Math.cos(theta);
+
+      // Store for animation
+      _gateDoorBasePos[i].set(bx, 1.15, bz);
+      _gateDoorLatDir[i].set(latX, 0, latZ);
+      _gateDoorTheta[i] = theta;
+
+      // Side left: base - latDir * 1.0, y 1.15
+      _gateDummy.position.set(bx - latX * 1.0, 1.15, bz - latZ * 1.0);
+      _gateDummy.rotation.set(0, theta, 0);
+      _gateDummy.scale.set(1, 1, 1);
+      _gateDummy.updateMatrix();
+      gateSides.setMatrixAt(i * 2, _gateDummy.matrix);
+
+      // Side right: base + latDir * 1.0, y 1.15
+      _gateDummy.position.set(bx + latX * 1.0, 1.15, bz + latZ * 1.0);
+      _gateDummy.rotation.set(0, theta, 0);
+      _gateDummy.updateMatrix();
+      gateSides.setMatrixAt(i * 2 + 1, _gateDummy.matrix);
+
+      // Top bar: base, y 2.35
+      _gateDummy.position.set(bx, 2.35, bz);
+      _gateDummy.rotation.set(0, theta, 0);
+      _gateDummy.updateMatrix();
+      gateTops.setMatrixAt(i, _gateDummy.matrix);
+
+      // Door: base + fwd * 0.9, y 1.15 (closed, no rotation offset yet)
+      const doorX = bx + fwdX * 0.9;
+      const doorZ = bz + fwdZ * 0.9;
+      _gateDummy.position.set(doorX, 1.15, doorZ);
+      _gateDummy.rotation.set(0, theta, 0);
+      _gateDummy.updateMatrix();
+      gateDoors.setMatrixAt(i, _gateDummy.matrix);
+    }
+    gateSides.instanceMatrix.needsUpdate = true;
+    gateTops.instanceMatrix.needsUpdate  = true;
+    gateDoors.instanceMatrix.needsUpdate = true;
+  }
+
+  // gateSetVisible(v): restore/hide all gate parts
+  function gateSetVisible(v) {
+    gateSides.visible = v;
+    gateTops.visible  = v;
+    gateDoors.visible = v;
+  }
+
+  // Gate animation state
+  let gateDoorT     = 0;   // 0→1 over 0.25s as doors swing up
+  let _gateHideTimer = -1; // countdown: sides/tops hide 1.5s after running begins
 
   // ── Weather system ──
 
@@ -2109,6 +2452,48 @@
       // Still render / update camera while in gate screen
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
+    }
+
+    // ── Task 3: スターティングゲート ドアアニメ ──
+    // Doors swing UP around their top edge when running begins.
+    // Side/top panels hide 1.5s after running begins.
+    if (racePhase === 'running') {
+      if (gateDoorT < 1 && gateDoors.visible) {
+        gateDoorT = Math.min(1, gateDoorT + dt / 0.25);
+        const openAngle = gateDoorT * -1.6; // swing up -1.6 rad around top edge
+        for (let gi = 0; gi < _GATE_LANE_COUNT; gi++) {
+          const basePos = _gateDoorBasePos[gi]; // center of closed door
+          const theta   = _gateDoorTheta[gi];
+          // Hinge at door top edge: translate up 0.75 (half door height), rotate, translate back
+          // Compose: T(0,0.75,0) * Rx(openAngle) * T(0,-0.75,0)
+          // In world space: hinge = basePos + (0, 0.75, 0)
+          const hx = basePos.x, hy = basePos.y + 0.75, hz = basePos.z;
+          // Offset from hinge to door center after rotation
+          const offY =  Math.cos(openAngle) * (-0.75);
+          // Forward direction (door faces fwd)
+          const fwdX = Math.sin(theta), fwdZ = Math.cos(theta);
+          const offFwd = Math.sin(openAngle) * (-0.75);
+          _gateDummy.position.set(
+            hx + fwdX * offFwd,
+            hy + offY,
+            hz + fwdZ * offFwd
+          );
+          _gateDummy.rotation.set(openAngle, theta, 0);
+          _gateDummy.scale.set(1, 1, 1);
+          _gateDummy.updateMatrix();
+          gateDoors.setMatrixAt(gi, _gateDummy.matrix);
+        }
+        gateDoors.instanceMatrix.needsUpdate = true;
+        if (gateDoorT >= 1) gateDoors.visible = false;
+      }
+      // 1.5s timer: hide sides and tops
+      if (_gateHideTimer > 0) {
+        _gateHideTimer -= dt;
+        if (_gateHideTimer <= 0) {
+          gateSides.visible = false;
+          gateTops.visible  = false;
+        }
+      }
     }
 
     // Rain update runs every frame when visible (gate or running)
@@ -2785,6 +3170,11 @@
     accumulator = 0;
     racePhase = 'gate';
 
+    // Task 3: ゲート再配置（距離ごとにstartSが変わる）+ 表示リセット
+    positionGate(raceState.startS);   // reposition stalls to this race's start line
+    gateSetVisible(true);              // restore visibility of all gate parts
+    gateDoorT = 0;                     // reset door animation counter
+
     // Set up mini map dot colors and reset positions
     setupMiniMapDots(field, playerIdx);
     // Reset bar width measurement (in case layout shifted)
@@ -2925,6 +3315,7 @@
       document.getElementById('hud').style.display = 'block';
       document.getElementById('controls').style.display = 'block';
       racePhase = 'running';
+      _gateHideTimer = 1.5; // start 1.5s countdown to hide side panels/tops
     }, 600);
   }
 

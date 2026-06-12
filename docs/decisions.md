@@ -85,6 +85,19 @@
 - シェア文の形式：「ジョーバ ${distance}m ${rank}着！スコア${score}点 称号「${title}」 #ジョーバ」に統一。URL付与・navigator.share→clipboardフォールバックの仕組みは変更なし
 - btnRetrySameのfallback：snapがnull（ゲート未到達の場合）はresetAll後にgoToCondScreenを呼ぶ（btnRetryと同じ挙動）
 
+### 品質向上ラウンド Q2（コース環境）
+
+- 2026-06-12 Q2 芝縞刈り：trackGeoに`color`アトリビュート（Float32BufferAttribute, 3）を追加。25mごとにRGB 1.0/1.0/1.0と0.90/0.93/0.90を交互に割り当て。`trackMat.vertexColors=true`とし、applyWeatherのmaterial.color lerpがvertex colorsへの乗数として機能することを確認（lerp先はクローンした_baseTrackColorのため累積なし）。
+- 2026-06-12 Q2 地面テクスチャ：256×256 CanvasTexture、#3a7d44ベース＋1500個の2-3pxスペックル（輝度±10%）。RepeatWrapping、repeat 30×30。groundMat.mapとして設定。color×mapでapplyWeatherの重馬場/天気変化と両立。
+- 2026-06-12 Q2 スターティングゲート：`positionGate(startS)`で12レーン分のサイド(24)/トップ(12)/ドア(12) InstancedMeshを配置。latDirはworldPos数値微分（i±0.5）で求め、コーナー発走にも対応。ドアはforward方向0.9m前に配置し閉鎖状態を表現。openGateScreen内で3行追加（positionGate/gateSetVisible/gateDoorT=0）。racePhase='running'設定後に`_gateHideTimer=1.5`を立て、サイド/トップ1.5s後に非表示。ドアは上端ヒンジ(-1.6rad)で0.25s以内に開き、アニメ完了でdoors.visible=false。
+- 2026-06-12 Q2 観客スタンド：tier1(12×6×420, x=-154, y=3)とtier2(10×6×420, x=-161, y=8)の直方体2本＋屋根1本（Lambert）。220人のInstancedMesh、per-instanceカラーをsetHSL(rand, 0.4+0.3rand, 0.45+0.25rand)で設定。
+- 2026-06-12 Q2 遠景ビル：128×128 CanvasTexture(6×8グリッド約40%点灯)を共有Lambert materialに使用。BoxGeometry(1,1,1)のInstancedMesh(10)でscaleにより18-30×30-70mのビル群を配置（バックストレッチ外側＋コーナー奥）。
+- 2026-06-12 Q2 遠景木：ConeGeometry(2.2,5,6)とCylinderGeometry(0.35,0.45,2.4,5)のInstancedMesh各44本。内8本はインフィールド、残36本はコース外半径150-200m（スタンド帯x<-145かつ|z|<220を除外）。
+- 2026-06-12 Q2 遠景雲：64×64 canvas radial gradient（白→透明）、5枚PlaneGeometry(60,24)、MeshBasicMaterial透明・depthWrite:false、y 90-130、lookAt(0,y,0)で原点方向を向く。静的配置。
+- 2026-06-12 Q2 内ラチ横棒：postCount×2本のInstancedMesh、各隣接ポストペア間のmidpoint・chord長・chord角でscale.z/rotation.yを設定、y 1.05。
+- 2026-06-12 Q2 ハロン数字板：k=1..7の各ハロン棒に対し64×48 CanvasTexture（緑背景・白太字で`${k*200}`）、PlaneGeometry(1.5,1.1)、MeshBasicMaterial DoubleSide、y 2.7。
+- 2026-06-12 Q2 新規ドローコール数：InstancedMesh×9(gateSides/gateTops/gateDoors/crowdMesh/bldMesh/treeCones/treeTrunks/railBars + 既存railPosts)、Mesh多数で合計追加約25コール。per-frameアロケーションなし。
+
 ### 品質向上ラウンド
 
 - 2026-06-12 Q1（R1 馬モデル刷新）：馬ジオメトリを全頭共有化した。THREE-SCENE先頭に `HORSE_GEO` テーブルを作り、`_sharedGeo()` で各ジオメトリに `userData.shared=true` を付与してモジュール読込時に1回だけ生成。`createHorseModel` は per-horse でマテリアル（被毛/シルク/暗色脚・尾・たてがみ/白キャップ）とメッシュ・ピボットのみ新規生成する。これに伴い `disposeObject3D` を `if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose()` に変更し、再レース時に共有ジオメトリを破棄してモデルが壊れる事故を防止（マテリアルは per-horse なので従来どおり破棄）。
