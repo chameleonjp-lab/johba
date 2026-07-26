@@ -78,21 +78,18 @@
       min-height: 44px;
     }
 
-    /* ===== TITLE SCREEN =====（半透明：背後でアイドルカメラがコースを周回） */
+    /* ===== TITLE SCREEN ===== */
     #screenTitle {
-      background: linear-gradient(180deg, rgba(8, 8, 40, 0.84), rgba(20, 20, 66, 0.76));
-      box-shadow: inset 0 0 120px 40px rgba(0, 0, 0, 0.55);
+      background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
       justify-content: center;
       padding: 16px;
       overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
     #screenTitle h1 {
       font-size: 52px; font-weight: 900; letter-spacing: 4px; margin: 0 0 8px;
-      background: linear-gradient(180deg, #fff, #88ccff);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      filter: drop-shadow(0 0 14px rgba(68,170,255,0.6));
+      text-shadow: 0 0 20px #44aaff;
     }
-    #screenTitle .subtitle { font-size: 14px; color: #aaa; margin: 0 0 36px; letter-spacing: 2px; }
+    #screenTitle .subtitle { font-size: 14px; color: #aaa; margin: 0 0 36px; }
     #screenTitle .title-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 260px; }
     #screenTitle .sub-links {
       display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center;
@@ -110,19 +107,6 @@
       display: flex; align-items: center; min-height: 44px;
     }
     .tip { font-size: 12px; color: #888; margin-top: 10px; }
-
-    /* Q5: レース中の音ON/OFFトグル（右上固定。HUDバーは左上なので干渉しない）。
-       表示・非表示は #hud と同じ箇所で JS が切り替える。 */
-    #btnSoundRace {
-      display: none; position: fixed; z-index: 16;
-      right: 10px; top: calc(env(safe-area-inset-top) + 8px);
-      min-width: 44px; min-height: 34px; padding: 8px 12px;
-      font-size: 12px; font-weight: 700; line-height: 1;
-      color: #cde; background: rgba(0,0,0,0.45);
-      border: 1px solid rgba(255,255,255,0.35); border-radius: 16px;
-      pointer-events: auto; cursor: pointer;
-      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-    }
 
     /* ===== COND SCREEN ===== */
     #screenCond {
@@ -330,34 +314,11 @@
     #resultRecap {
       font-size: 13px; color: #888; margin-bottom: 6px;
     }
-    #resultTitle {
-      font-size: 14px; font-weight: 700; color: #ffe066;
-      border: 1px solid #ffe066; border-radius: 999px;
-      padding: 4px 14px; margin-bottom: 8px;
-      display: inline-block;
-    }
     #resultComment {
-      font-size: 13px; color: #aaddff; margin-bottom: 10px;
+      font-size: 13px; color: #aaddff; margin-bottom: 14px;
       line-height: 1.6; max-width: 320px; text-align: center;
       padding: 8px 12px; background: rgba(68,170,255,0.08);
       border-radius: 8px; border: 1px solid rgba(68,170,255,0.2);
-    }
-    #ridingMemo {
-      width: 100%; max-width: 360px; margin-bottom: 16px;
-    }
-    #ridingMemo .memo-header {
-      font-size: 12px; font-weight: 700; color: #88aacc;
-      margin-bottom: 6px; letter-spacing: 0.5px;
-    }
-    #ridingMemo .memo-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 4px 8px;
-    }
-    #ridingMemo .memo-cell {
-      font-size: 12px; color: #ccc;
-    }
-    #ridingMemo .memo-cell .memo-val {
-      color: #fff; font-weight: 600;
     }
 
     /* ===== NAME INPUT (title screen) ===== */
@@ -382,10 +343,6 @@
     }
     #playerName::placeholder { color: #556; }
     #playerName:focus { border-color: #44aaff; background: rgba(68,170,255,0.1); }
-    #playerName.name-error { border-color: #ff6666; background: rgba(255,80,80,0.08); }
-    #nameWarn {
-      font-size: 13px; color: #ff8888; display: none; text-align: left;
-    }
 
     /* ===== RANKING SECTION (result screen) ===== */
     #rankingSection {
@@ -469,75 +426,93 @@
       z-index: 60;
     }
 
+
+    /* ===== TUTORIAL SCREEN ===== */
+    #screenTutorial {
+      background: linear-gradient(180deg, #0a0a2e, #1a1a4e);
+      justify-content: center;
+      padding: 20px 16px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      text-align: center;
+    }
+    #screenTutorial h2 { font-size: 24px; margin-bottom: 10px; color: #fff; }
+    #screenTutorial .tutorial-note { font-size: 13px; color: #9ab; line-height: 1.6; margin-bottom: 16px; }
+    .tutorial-card { width: 100%; max-width: 360px; display: grid; gap: 8px; margin-bottom: 18px; }
+    .tutorial-row { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10); }
+    .tutorial-key { min-width: 58px; min-height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(68,170,255,0.18); color: #fff; font-size: 18px; font-weight: 900; }
+    .tutorial-text strong { display:block; font-size: 14px; color:#fff; margin-bottom:2px; }
+    .tutorial-text span { display:block; font-size: 12px; color:#bbb; line-height:1.5; }
+
+    /* ===== NAME WARNING ===== */
+    #playerName.name-error { border-color: #ff6666; background: rgba(255,80,80,0.08); }
+    #nameWarn { font-size: 13px; color: #ff8888; display: none; text-align: left; }
+
     /* ===== MINI MAP ===== */
-    #miniMap {
-      position: relative;
-      height: 10px; width: 100%;
-      background: rgba(0,0,0,0.35);
-      border-radius: 5px;
-      margin-top: 5px;
-      pointer-events: none;
-      overflow: visible;
+    #miniMap { position: relative; height: 10px; width: 100%; background: rgba(0,0,0,0.35); border-radius: 5px; margin-top: 5px; pointer-events: none; overflow: visible; }
+    #miniMapGoalTick { position: absolute; right: 0; top: 0; width: 2px; height: 100%; background: #fff; }
+    #miniMapGoalLabel { position: absolute; right: 3px; top: -10px; font-size: 9px; color: #fff; font-weight: 700; line-height: 1; }
+    .mm-dot { position: absolute; top: 50%; transform: translate(0,-50%); border-radius: 50%; opacity: 0.9; }
+
+    /* ===== GATE TAP AREA ===== */
+    #gateTapArea { display: none; min-width: 210px; min-height: 86px; padding: 14px 18px; border-radius: 20px; border: 2px solid rgba(255,224,102,0.85); background: rgba(0,0,0,0.42); box-shadow: 0 0 18px rgba(255,224,102,0.28), inset 0 0 18px rgba(255,224,102,0.10); align-items: center; justify-content: center; flex-direction: column; text-align: center; color: #fff; font-weight: 900; touch-action: manipulation; }
+    #gateTapArea .gate-main { font-size: 17px; margin-bottom: 4px; }
+    #gateTapArea .gate-sub { font-size: 12px; color: #ffe066; font-weight: 700; }
+
+    /* ===== BUTTON PRESS FEEDBACK ===== */
+    #btnAccel.pressed,
+    #btnHold.pressed,
+    #btnWhip.pressed {
+      background: rgba(255,255,255,0.92) !important;
+      color: #111 !important;
+      border-color: #111 !important;
+      filter: none !important;
+      transform: scale(0.94);
     }
-    #miniMapGoalTick {
-      position: absolute; right: 0; top: 0; width: 2px; height: 100%;
-      background: #fff;
-    }
-    #miniMapGoalLabel {
-      position: absolute; right: 3px; top: -10px;
-      font-size: 9px; color: #fff; font-weight: 700;
-      line-height: 1;
-    }
-    .mm-dot {
-      position: absolute; top: 50%;
-      transform: translate(0,-50%);
-      border-radius: 50%;
-      opacity: 0.9;
+    #btnAccel.pressed span,
+    #btnHold.pressed span,
+    #btnWhip.pressed span {
+      color: #111 !important;
     }
 
-    /* ===== LANE TOAST ===== */
+    /* ===== WHIP EFFECT ===== */
+    #whipEffectToast { position: fixed; top: 34%; left: 50%; transform: translateX(-50%); z-index: 22; pointer-events: none; display: none; font-size: 22px; font-weight: 900; color: #ffdddd; text-shadow: 0 0 10px #b00000, 1px 1px 0 #000, -1px -1px 0 #000; white-space: nowrap; }
+    #hudSpeedFill.whip-active { background:#ff5555 !important; box-shadow:0 0 8px rgba(255,80,80,0.85); }
+
+
+
+    /* ===== RESTORED FEEDBACK UI ===== */
+    #milestoneToast {
+      display:none; position:fixed; top:26%; left:50%; transform:translateX(-50%);
+      pointer-events:none; z-index:22; font-size:20px; font-weight:900; color:#fff;
+      text-shadow:0 0 6px #000, 1px 1px 0 #000; white-space:nowrap;
+      font-family:system-ui,sans-serif;
+    }
     #laneToast {
-      position: fixed; top: 38%; left: 50%;
-      transform: translateX(-50%);
-      pointer-events: none; z-index: 15;
-      font-size: 20px; font-weight: 900;
-      text-shadow: 0 0 6px #000, 1px 1px 0 #000, -1px -1px 0 #000;
-      white-space: nowrap;
-      display: none;
+      display:none; position:fixed; top:38%; left:50%; transform:translateX(-50%);
+      pointer-events:none; z-index:22; font-size:20px; font-weight:900; color:#fff;
+      text-shadow:0 0 6px #000, 1px 1px 0 #000, -1px -1px 0 #000;
+      white-space:nowrap; font-family:system-ui,sans-serif;
     }
 
-    /* ===== GOAL FX（Q3：ゴールフラッシュ・1着紙吹雪・接戦キュー） ===== */
-    #goalFlash {
-      position: fixed; inset: 0; background: #fff; opacity: 0;
-      pointer-events: none; z-index: 30;
-      transition: opacity 0.14s ease-out;
-    }
-    #goalFlash.on { opacity: 0.55; }
-    #confettiBox {
-      position: fixed; inset: 0; pointer-events: none; z-index: 31;
-      overflow: hidden; display: none;
-    }
-    .confetti {
-      position: absolute; top: -14px; width: 8px; height: 14px;
-      opacity: 0.95; border-radius: 2px;
-      animation: confFall 2.2s ease-in forwards;
-    }
-    @keyframes confFall {
-      to { transform: translateY(110vh) rotate(720deg); opacity: 0.7; }
-    }
-    #slowMoCue {
-      position: fixed; top: 30%; left: 50%; transform: translateX(-50%);
-      pointer-events: none; z-index: 15; display: none;
-      font-size: 26px; font-weight: 900; color: #ffe066;
-      text-shadow: 0 0 10px #aa7700, 1px 1px 0 #000, -1px -1px 0 #000;
-      letter-spacing: 4px;
-    }
+    /* ===== RESTORED GOAL FX ===== */
+    #goalFlash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:30; transition:opacity 0.14s ease-out; }
+    #goalFlash.on { opacity:0.55; }
+    #confettiBox { position:fixed; inset:0; pointer-events:none; z-index:31; overflow:hidden; display:none; }
+    .confetti { position:absolute; top:-14px; width:8px; height:14px; opacity:0.95; border-radius:2px; animation:confFall 2.2s ease-in forwards; }
+    @keyframes confFall { to { transform:translateY(110vh) rotate(720deg); opacity:0.7; } }
+    #slowMoCue { position:fixed; top:30%; left:50%; transform:translateX(-50%); pointer-events:none; z-index:22; display:none; font-size:26px; font-weight:900; color:#ffe066; text-shadow:0 0 10px #aa7700, 1px 1px 0 #000, -1px -1px 0 #000; letter-spacing:4px; }
+
+    /* ===== RESTORED RESULT DETAIL ===== */
+    #resultTitle { font-size:14px; font-weight:900; color:#ffe066; border:1px solid #ffe066; border-radius:999px; padding:4px 14px; margin-bottom:8px; display:inline-block; }
+    #ridingMemo { width:100%; max-width:360px; margin-bottom:16px; }
+    #ridingMemo .memo-header { font-size:12px; font-weight:700; color:#88aacc; margin-bottom:6px; letter-spacing:0.5px; }
+    #ridingMemo .memo-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; }
+    #ridingMemo .memo-cell { font-size:12px; color:#ccc; }
+    #ridingMemo .memo-cell .memo-val { color:#fff; font-weight:700; }
 
     /* ===== TOUCH-ACTION for scrollable areas ===== */
-    #entriesList, #screenResult, .modal-box, #ceremonyRows,
-    #screenTitle, #screenLottery {
-      touch-action: pan-y;
-    }
+    #entriesList, #screenResult, .modal-box, #ceremonyRows, #screenTitle, #screenLottery, #screenTutorial { touch-action: pan-y; }
 
     /* ===== 低い画面（iPhone SE縦持ち等）への対応 ===== */
     /* justify-content:center + overflow は上端がクリップされるため上詰めに切り替える */
@@ -549,52 +524,14 @@
       #btnHold, #btnAccel { width: 64px !important; height: 64px !important; font-size: 26px !important; }
       #btnWhip { bottom: calc(152px + env(safe-area-inset-bottom)) !important; height: 48px !important; }
     }
-
-    /* Q4: スタミナバー低下点滅 */
-    @keyframes stamPulse {
-      50% { opacity: 0.55; }
-    }
-    #hudStaminaFill.low {
-      animation: stamPulse 0.8s infinite;
-    }
-
-    /* Q4: ボタン押下フィードバック */
-    #btnAccel.pressed, #btnHold.pressed, #btnWhip.pressed {
-      transform: scale(0.92) !important;
-      filter: brightness(1.35);
-      transition: transform 0.08s, filter 0.08s;
-    }
-
-    /* Q4: スプラッシュスピナー */
-    @keyframes splashSpin {
-      to { transform: rotate(360deg); }
-    }
   </style>
 </head>
 <body>
 
-  <!-- ==== SPLASH ==== -->
-  <div id="splash" style="
-    position:fixed; inset:0; z-index:99;
-    background:#0a0a2e;
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    font-family:system-ui,sans-serif; color:#fff;
-  ">
-    <div style="font-size:48px; font-weight:900; letter-spacing:4px; margin-bottom:12px;">ジョーバ</div>
-    <div id="splashMsg" style="font-size:14px; color:#aaa; margin-bottom:24px;">読み込み中...</div>
-    <div style="
-      width:32px; height:32px; border-radius:50%;
-      border:3px solid rgba(68,170,255,0.25);
-      border-top-color:#44aaff;
-      animation:splashSpin 0.8s linear infinite;
-    "></div>
-  </div>
-
   <!-- ==== HUD ==== -->
   <div id="hud" style="
     position:fixed; top:0; left:0; width:100%; pointer-events:none;
-    padding:10px 76px 10px 12px; z-index:10; display:none; font-family:system-ui,sans-serif;">
+    padding:10px 12px; z-index:10; display:none; font-family:system-ui,sans-serif;">
 
     <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
       <span id="hudRank" style="color:#fff; font-size:15px; font-weight:700; text-shadow:0 1px 4px #000;
@@ -631,18 +568,13 @@
         padding:2px 8px; border-radius:11px; color:#fff;
         background:rgba(240,130,20,0.92); text-shadow:0 1px 2px #000;">⚡ 掛かり！</span>
     </div>
-
-    <!-- Mini map -->
     <div id="miniMap">
       <div id="miniMapGoalTick"></div>
       <div id="miniMapGoalLabel">G</div>
     </div>
   </div>
-
-  <!-- ==== Q5: 音ON/OFF（レース中・右上。#hud と同じ表示制御で出し入れ） ==== -->
-  <button id="btnSoundRace">音ON</button>
-
-  <!-- ==== LANE TOAST ==== -->
+  <div id="whipEffectToast">ムチ加速！</div>
+  <div id="milestoneToast"></div>
   <div id="laneToast"></div>
   <div id="goalFlash"></div>
   <div id="confettiBox"></div>
@@ -673,39 +605,6 @@
     </div>
   </div>
 
-  <!-- ==== FIRST HINT OVERLAY ==== -->
-  <div id="firstHint" style="
-    display:none; position:fixed; inset:0; z-index:25;
-    pointer-events:auto;
-    background:rgba(0,0,0,0.55);
-    font-family:system-ui,sans-serif;
-  ">
-    <div style="position:absolute; bottom:calc(168px + env(safe-area-inset-bottom)); right:20px; text-align:center;">
-      <div style="font-size:13px; color:#ffe066; font-weight:700; text-shadow:0 1px 3px #000;">▲＝仕掛ける</div>
-    </div>
-    <div style="position:absolute; bottom:calc(168px + env(safe-area-inset-bottom)); left:20px; text-align:center;">
-      <div style="font-size:13px; color:#aaeeff; font-weight:700; text-shadow:0 1px 3px #000;">▼＝抑える</div>
-    </div>
-    <div style="position:absolute; bottom:calc(240px + env(safe-area-inset-bottom)); right:20px; text-align:center;">
-      <div style="font-size:13px; color:#ffaaaa; font-weight:700; text-shadow:0 1px 3px #000;">ムチ＝一気に加速</div>
-    </div>
-    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
-      <div style="font-size:14px; color:#fff; font-weight:700; text-shadow:0 1px 3px #000; background:rgba(0,0,0,0.4); padding:8px 14px; border-radius:10px;">左右スワイプ／画面端タップ＝進路変更</div>
-      <div style="font-size:12px; color:#aaa; margin-top:6px;">画面をタップで閉じる</div>
-    </div>
-  </div>
-
-  <!-- ==== MILESTONE TOAST ==== -->
-  <div id="milestoneToast" style="
-    display:none; position:fixed; top:26%; left:50%;
-    transform:translateX(-50%);
-    pointer-events:none; z-index:22;
-    font-size:18px; font-weight:700; color:#fff;
-    text-shadow:0 0 6px #000, 1px 1px 0 #000;
-    white-space:nowrap;
-    font-family:system-ui,sans-serif;
-  "></div>
-
   <!-- ==== UI-SCREENS ==== -->
 
   <!-- ---- Title screen ---- -->
@@ -721,24 +620,29 @@
       <button id="btnStart" class="btn-primary">レース開始</button>
       <button id="btnRules" class="btn-secondary">ルール説明</button>
     </div>
-    <p class="tip" style="font-size:13px;color:#9ab;margin-top:8px;margin-bottom:0;">横持ちプレイ推奨（縦でも遊べます）</p>
     <div class="sub-links">
       <button id="btnShare">ゲームをシェア</button>
-      <button id="btnSound">音ON</button>
       <a href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
+  </div>
+
+  <!-- ---- Tutorial screen ---- -->
+  <div id="screenTutorial" class="screen-overlay">
+    <h2>操作確認</h2>
+    <p class="tutorial-note">レース前に、使う操作だけ確認します。すべて親指で操作できます。</p>
+    <div class="tutorial-card">
+      <div class="tutorial-row"><div class="tutorial-key">▲</div><div class="tutorial-text"><strong>仕掛ける</strong><span>スピードを上げます。スタミナ消費も増えます。</span></div></div>
+      <div class="tutorial-row"><div class="tutorial-key">▼</div><div class="tutorial-text"><strong>抑える</strong><span>スタミナを温存します。掛かりも抑えやすくなります。</span></div></div>
+      <div class="tutorial-row"><div class="tutorial-key">ムチ</div><div class="tutorial-text"><strong>短時間だけ強く加速</strong><span>効果中は画面に「ムチ加速！」と表示します。</span></div></div>
+      <div class="tutorial-row"><div class="tutorial-key">左右</div><div class="tutorial-text"><strong>進路変更</strong><span>左右スワイプ、または画面端タップで移動します。</span></div></div>
+    </div>
+    <button id="btnTutorialNext" class="btn-primary">レース条件へ</button>
   </div>
 
   <!-- ---- Rules modal ---- -->
   <div id="rulesModal" class="modal-backdrop">
     <div class="modal-box">
       <h3>ルール・操作説明</h3>
-      <div style="background:rgba(68,170,255,0.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;">
-        <p style="font-size:13px;color:#88ccff;font-weight:700;margin-bottom:4px;">まずはこれだけ</p>
-        <p style="font-size:13px;color:#ccc;margin-bottom:2px;">・▲で仕掛ける／▼で抑える</p>
-        <p style="font-size:13px;color:#ccc;margin-bottom:2px;">・左右スワイプか画面端タップで進路変更</p>
-        <p style="font-size:13px;color:#ccc;margin-bottom:0;">・ムチで一気に加速（スタミナ消費）</p>
-      </div>
       <p><strong>目標：</strong>12頭のレースで1着を目指しましょう。</p>
       <ul>
         <li><strong>右下ボタン▲（仕掛ける）</strong>：スピードを上げます。スタミナ消費が増えます。</li>
@@ -806,8 +710,12 @@
     <div id="gateOverlayContent">
       <div id="gateStatus">各馬ゲートイン...</div>
       <div id="gateSignal">スタート！</div>
+      <div id="gateTapArea">
+        <div class="gate-main">ゲートが開くと同時にタップ</div>
+        <div class="gate-sub">0.3秒以内で好スタート</div>
+      </div>
       <div id="gateFeedback"></div>
-      <div id="gateTapHint">タイミングよくタップ！</div>
+      <div id="gateTapHint">ゲートが開くと同時にタップ</div>
     </div>
   </div>
 
@@ -853,16 +761,6 @@
       <a id="btnToLab" class="btn-tertiary" href="https://chameleonjp.codeberg.page/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
   </div>
-
-  <script>
-  setTimeout(function() {
-    var s = document.getElementById('splash');
-    if (s) {
-      var msg = document.getElementById('splashMsg');
-      if (msg) msg.textContent = '読み込みに失敗した可能性があります。通信環境を確認して再読み込みしてください';
-    }
-  }, 12000);
-  </script>
 
   <script type="importmap">
   {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js"}}
@@ -938,6 +836,7 @@
 
     // 鞭（ムチ）
     WHIP_BOOST: 1.0,        // 発動直後の上乗せ m/s（瞬発力と連打減衰で増減）
+    WHIP_SPEED_MULT: 1.1,   // ムチ発動中の速度効果倍率（体感強化）
     WHIP_DURATION: 2.5,     // 効果が線形に切れるまでの秒数
     WHIP_COST: 55,          // 1発のスタミナ消費
     WHIP_COOLDOWN: 1.0,     // 連打の最小間隔 s
@@ -970,22 +869,12 @@
     GOING_BROWN:       0x6e5a3a,  // lerp target for heavy going
     GOING_LERP:        { '良': 0, '稍重': 0.15, '重': 0.30, '不良': 0.45 },
     GOING_GROUND_DARK: { '良': 0, '稍重': 0,   '重': 0.12, '不良': 0.22 },
-    RAIN_COUNT: 400,
+    RAIN_COUNT: 50,
     RAIN_SPEED: 28,      // m/s downward
     CEREMONY_ROW_INTERVAL: 280, // ms between rows appearing
     CEREMONY_PHOTO_THRESH: 0.08, // s gap for photo-finish
     CEREMONY_PHOTO_SHOW: 1400,   // ms to show photo-judge text
     FASTFWD_STEPS: 3,    // extra sim steps per frame after player finishes
-
-    // Q5: プロシージャルサウンド音量（すべて 0–1 の gain。masterGain 経由で出力）
-    SND_MASTER: 0.5,     // マスター音量（destination 直前）
-    SND_HOOF: 0.18,      // 蹄音 1 打のピーク
-    SND_GATE: 0.5,       // ゲート開放クラング
-    SND_WHIP: 0.45,      // 鞭のクラック
-    SND_ALERT: 0.3,      // 掛かり警告ビープ
-    SND_TICK: 0.18,      // マイルストーンのティック
-    SND_CROWD: 0.22,     // 歓声スウェルのピーク（最後の直線）
-    SND_GOAL: 0.4,       // ゴール音（着順別アルペジオ）
 
     // Supabase (Phase 5)
     SUPABASE_URL: 'https://mlpnjgezrnhdxsxolyzj.supabase.co',
@@ -1263,7 +1152,7 @@
       fieldCruiseAvg: cruiseSum / field.length,
       paceRatio: 0,
       paceRecorded: false,
-      // プレイヤー馬のレース統計（講評・騎乗メモ用）。安価に維持する
+      // プレイヤー馬のレース統計（フェーズ4の講評用）。安価に維持する
       playerStats: {
         kakariTime: 0,         // 掛かっていた累積秒数
         blockedTime: 0,        // 前が壁だった累積秒数（全区間）
@@ -1528,8 +1417,11 @@
       // 現在の鞭ブースト（残り時間に応じて線形減衰）
       const whipNow = h.whipTimer > 0 ? h.whipBoost * (h.whipTimer / CONFIG.WHIP_DURATION) : 0;
       targetSpeed += whipNow;
+      if (whipNow > 0) {
+        targetSpeed *= CONFIG.WHIP_SPEED_MULT;
+      }
 
-      // Apply wall cap
+      // Apply wall cap（ムチ中も前の馬は突き抜けない）
       targetSpeed = Math.min(targetSpeed, speedCap);
 
       // ── Bate (stamina-based speed limits) ──
@@ -1538,6 +1430,9 @@
       let effectiveMax = h.maxSpeed +
         Math.min(CONFIG.SPURT_FRESH_MAX, staminaFrac * CONFIG.SPURT_FRESH_K);
       effectiveMax += whipNow; // 鞭は最高速度の天井を本当に押し上げる（バテ減算はこの後に効く）
+      if (whipNow > 0) {
+        effectiveMax *= CONFIG.WHIP_SPEED_MULT;
+      }
       if (staminaFrac <= 0) {
         effectiveMax = Math.min(h.cruiseSpeed * CONFIG.BATE_SPEED_FLOOR, effectiveMax);
       } else if (staminaFrac < CONFIG.BATE_THRESH_2) {
@@ -1648,59 +1543,57 @@
 
   // ==== SECTION: THREE-SCENE ====
 
-  // Dispose materials (per-horse) and any NON-shared geometry in an Object3D hierarchy.
-  // 馬モデルはジオメトリを全頭で共有するため、shared フラグの付いたジオメトリは破棄しない。
-  // （破棄すると再レース時に全頭のモデルが壊れる）
   function disposeObject3D(obj) {
     obj.traverse(o => {
       if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
-      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+      if (o.material) {
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        mats.forEach(m => m.dispose());
+      }
     });
   }
 
   // Progress is measured along the INSIDE RAIL centerline.
   // worldPos: (progress_meters, lane_float) → [x, y, z]
-  // 鏡映（x反転）で左回りコースにしている：外側レーン＝騎手の右＝画面右。
-  // スワイプ右＝外へ、の直感と一致させるための座標系（headingAngleも対で符号反転）
   function worldPos(progress, lane) {
     const { LAP_LEN, STRAIGHT_LEN, INSIDE_RADIUS, LANE_WIDTH } = CONFIG;
     let s = ((progress % LAP_LEN) + LAP_LEN) % LAP_LEN;
     const lc = INSIDE_RADIUS + (lane + 0.5) * LANE_WIDTH; // lane center radius
 
     if (s < STRAIGHT_LEN) {
-      return [-lc, 0, s - STRAIGHT_LEN * 0.5];
+      return [lc, 0, s - STRAIGHT_LEN * 0.5];
     }
     s -= STRAIGHT_LEN;
     const cl = CONFIG.CORNER_LEN;
     if (s < cl) {
       const a = s / INSIDE_RADIUS; // 0→π
-      return [-(lc * Math.cos(a)), 0, STRAIGHT_LEN * 0.5 + lc * Math.sin(a)];
+      return [lc * Math.cos(a), 0, STRAIGHT_LEN * 0.5 + lc * Math.sin(a)];
     }
     s -= cl;
     if (s < STRAIGHT_LEN) {
-      return [lc, 0, STRAIGHT_LEN * 0.5 - s];
+      return [-lc, 0, STRAIGHT_LEN * 0.5 - s];
     }
     s -= STRAIGHT_LEN;
     const a2 = Math.PI + s / INSIDE_RADIUS; // π→2π
-    return [-(lc * Math.cos(a2)), 0, -STRAIGHT_LEN * 0.5 + lc * Math.sin(a2)];
+    return [lc * Math.cos(a2), 0, -STRAIGHT_LEN * 0.5 + lc * Math.sin(a2)];
   }
 
-  // Horse rotation around Y axis (0 = facing +z)。worldPos の鏡映に合わせて符号反転
+  // Horse rotation around Y axis (0 = facing +z)
   function headingAngle(progress) {
     const { LAP_LEN, STRAIGHT_LEN, INSIDE_RADIUS, CORNER_LEN } = CONFIG;
     let s = ((progress % LAP_LEN) + LAP_LEN) % LAP_LEN;
     if (s < STRAIGHT_LEN) return 0;
     s -= STRAIGHT_LEN;
-    if (s < CORNER_LEN) return s / INSIDE_RADIUS;
+    if (s < CORNER_LEN) return -(s / INSIDE_RADIUS);
     s -= CORNER_LEN;
-    if (s < STRAIGHT_LEN) return Math.PI;
+    if (s < STRAIGHT_LEN) return -Math.PI;
     s -= STRAIGHT_LEN;
-    return Math.PI + s / INSIDE_RADIUS;
+    return -(Math.PI + s / INSIDE_RADIUS);
   }
 
   // Scene setup
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = false;
   document.body.appendChild(renderer.domElement);
@@ -1726,45 +1619,20 @@
 
   // ── Course geometry ──
   function buildCourse() {
-    // ── Task 2: 地面ノイズテクスチャ ──
-    // 256×256 canvas: base #3a7d44 + ~1500 random 2-3px speckles ±10% lightness
-    const gndCanvas = document.createElement('canvas');
-    gndCanvas.width = 256; gndCanvas.height = 256;
-    const gndCtx = gndCanvas.getContext('2d');
-    gndCtx.fillStyle = '#3a7d44';
-    gndCtx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 1500; i++) {
-      const bright = Math.random() < 0.5;
-      const lum = bright ? Math.floor(Math.random() * 26) : -Math.floor(Math.random() * 26);
-      // Parse #3a7d44 components: r=58,g=125,b=68
-      const r = Math.max(0, Math.min(255, 58  + lum));
-      const g = Math.max(0, Math.min(255, 125 + lum));
-      const b = Math.max(0, Math.min(255, 68  + lum));
-      const sz = 2 + Math.floor(Math.random() * 2);
-      gndCtx.fillStyle = `rgb(${r},${g},${b})`;
-      gndCtx.fillRect(Math.random() * 256, Math.random() * 256, sz, sz);
-    }
-    const groundTex = new THREE.CanvasTexture(gndCanvas);
-    groundTex.wrapS = THREE.RepeatWrapping;
-    groundTex.wrapT = THREE.RepeatWrapping;
-    groundTex.repeat.set(30, 30);
-
     // Ground plane
     const groundGeo = new THREE.PlaneGeometry(800, 800);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44, map: groundTex });
-    groundMat.needsUpdate = true;
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44 });
     envRefs.groundMat = groundMat;
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.05;
     scene.add(ground);
 
-    // ── Track strip with Task 1: 芝縞刈り vertex colors ──
-    // Alternate two brightness levels every ~25m of course length
+    // Track strip with turf stripe vertex colors
     const SEG = 160;
     const positions = [];
     const indices = [];
-    const vcols = []; // vertex colors
+    const vcols = [];
     const innerLane = -0.5;
     const outerLane = CONFIG.LANE_COUNT - 0.5;
     for (let k = 0; k <= SEG; k++) {
@@ -1775,10 +1643,8 @@
       const brightB = stripeIdx === 0 ? 1.0 : 0.90;
       const [ix, , iz] = worldPos(p, innerLane);
       const [ox, , oz] = worldPos(p, outerLane);
-      positions.push(ix, 0, iz);
-      vcols.push(bright, brightG, brightB);
-      positions.push(ox, 0, oz);
-      vcols.push(bright, brightG, brightB);
+      positions.push(ix, 0, iz); vcols.push(bright, brightG, brightB);
+      positions.push(ox, 0, oz); vcols.push(bright, brightG, brightB);
     }
     for (let k = 0; k < SEG; k++) {
       const a = k * 2, b = k * 2 + 1, c = k * 2 + 2, d = k * 2 + 3;
@@ -1790,8 +1656,6 @@
     trackGeo.setAttribute('color', new THREE.Float32BufferAttribute(vcols, 3));
     trackGeo.setIndex(indices);
     trackGeo.computeVertexNormals();
-    // vertexColors: true — material.color acts as a multiplier on the per-vertex colors.
-    // applyWeather lerps material.color only, so the stripe pattern is preserved.
     const trackMat = new THREE.MeshLambertMaterial({ color: 0xc8a86b, side: THREE.DoubleSide, vertexColors: true });
     envRefs.trackMat = trackMat;
     const track = new THREE.Mesh(trackGeo, trackMat);
@@ -1810,6 +1674,7 @@
       const [ix, , iz] = worldPos(p, -0.5);
       dummy.position.set(ix, 0.6, iz);
       dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       railPosts.setMatrixAt(inst++, dummy.matrix);
       const [ox, , oz] = worldPos(p, CONFIG.LANE_COUNT + 0.5);
@@ -1820,8 +1685,7 @@
     railPosts.instanceMatrix.needsUpdate = true;
     scene.add(railPosts);
 
-    // ── Task 6: 内ラチ横棒 (rail bars) ──
-    // For each consecutive post pair: horizontal bar at y 1.05, length = chord distance
+    // Rail horizontal bars
     const barGeo = new THREE.BoxGeometry(0.06, 0.06, 1);
     const barMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     const railBars = new THREE.InstancedMesh(barGeo, barMat, postCount * 2);
@@ -1829,28 +1693,26 @@
     for (let k = 0; k < postCount; k++) {
       const p0 = k * postSpacing;
       const p1 = ((k + 1) % postCount) * postSpacing;
-      // Inner lane
       const [ix0, , iz0] = worldPos(p0, -0.5);
       const [ix1, , iz1] = worldPos(p1, -0.5);
       const idx = ix1 - ix0, idz = iz1 - iz0;
-      const iLen = Math.sqrt(idx * idx + idz * idz);
+      const iLen = Math.hypot(idx, idz);
       dummy.position.set((ix0 + ix1) / 2, 1.05, (iz0 + iz1) / 2);
       dummy.rotation.set(0, Math.atan2(idx, idz), 0);
       dummy.scale.set(1, 1, iLen);
       dummy.updateMatrix();
       railBars.setMatrixAt(barInst++, dummy.matrix);
-      // Outer lane
       const [ox0, , oz0] = worldPos(p0, CONFIG.LANE_COUNT + 0.5);
       const [ox1, , oz1] = worldPos(p1, CONFIG.LANE_COUNT + 0.5);
       const odx = ox1 - ox0, odz = oz1 - oz0;
-      const oLen = Math.sqrt(odx * odx + odz * odz);
+      const oLen = Math.hypot(odx, odz);
       dummy.position.set((ox0 + ox1) / 2, 1.05, (oz0 + oz1) / 2);
       dummy.rotation.set(0, Math.atan2(odx, odz), 0);
       dummy.scale.set(1, 1, oLen);
       dummy.updateMatrix();
       railBars.setMatrixAt(barInst++, dummy.matrix);
     }
-    dummy.scale.set(1, 1, 1); // reset scale on shared dummy
+    dummy.scale.set(1, 1, 1);
     railBars.instanceMatrix.needsUpdate = true;
     scene.add(railBars);
 
@@ -1871,8 +1733,7 @@
     goalPost.position.set(gx, 1.75, gz);
     scene.add(goalPost);
 
-    // ── Task 6: ハロン棒の数字板 ──
-    // Original post + 64×48 canvas board with distance text
+    // ハロン棒：ゴールから200mごとの残距離標識（数字板付き）
     const halonGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
     const halonMat = new THREE.MeshLambertMaterial({ color: 0xff5050 });
     for (let k = 1; k <= 7; k++) {
@@ -1881,7 +1742,7 @@
       const [hx, , hz] = worldPos(p, CONFIG.LANE_COUNT + 1.2);
       halon.position.set(hx, 1, hz);
       scene.add(halon);
-      // Canvas board
+
       const hc = document.createElement('canvas');
       hc.width = 64; hc.height = 48;
       const hctx = hc.getContext('2d');
@@ -1900,264 +1761,82 @@
       halonBoard.position.set(hx, 2.7, hz);
       scene.add(halonBoard);
     }
-
-    // ── Task 4: 観客スタンド（home straight outside = x NEGATIVE side） ──
-    const standMat1 = new THREE.MeshLambertMaterial({ color: 0x9aa0a8 });
-    const standMat2 = new THREE.MeshLambertMaterial({ color: 0x7a8088 });
-    const roofMat   = new THREE.MeshLambertMaterial({ color: 0x3a3e45 });
-    // Tier 1: 12×6×420 centered at x=-154, y=3
-    const tier1 = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 420), standMat1);
-    tier1.position.set(-154, 3, 0);
-    scene.add(tier1);
-    // Tier 2: 10×6×420 centered at x=-161, y=8
-    const tier2 = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 420), standMat2);
-    tier2.position.set(-161, 8, 0);
-    scene.add(tier2);
-    // Roof atop tier2: thin dark box
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(12, 0.5, 422), roofMat);
-    roof.position.set(-162, 11.25, 0);
-    scene.add(roof);
-    // Crowd instances scattered on tier tops
-    const crowdGeo = new THREE.BoxGeometry(0.4, 0.5, 0.4);
-    const crowdMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    const crowdMesh = new THREE.InstancedMesh(crowdGeo, crowdMat, 220);
-    crowdMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(220 * 3), 3);
-    const crowdDummy = new THREE.Object3D();
-    const crowdColor = new THREE.Color();
-    for (let ci = 0; ci < 220; ci++) {
-      // Scatter on tier1 top (y=6) and tier2 top (y=11) surfaces
-      const onTier2 = ci < 100;
-      // 客席ボックスの天面範囲に収める（tier1天面: x−160..−148 / tier2天面: x−166..−156）
-      const cx = onTier2 ? (-165 + Math.random() * 8) : (-159 + Math.random() * 10);
-      const cy = onTier2 ? 11.3 : 6.3;
-      const cz = -205 + Math.random() * 410;
-      crowdDummy.position.set(cx, cy, cz);
-      crowdDummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
-      crowdDummy.updateMatrix();
-      crowdMesh.setMatrixAt(ci, crowdDummy.matrix);
-      crowdColor.setHSL(Math.random(), 0.4 + 0.3 * Math.random(), 0.45 + 0.25 * Math.random());
-      crowdMesh.setColorAt(ci, crowdColor);
-    }
-    crowdMesh.instanceMatrix.needsUpdate = true;
-    crowdMesh.instanceColor.needsUpdate = true;
-    scene.add(crowdMesh);
-
-    // ── Task 5: 遠景 ──
-
-    // Window texture for buildings: 128×128, dark blue-gray + lit windows
-    const winCanvas = document.createElement('canvas');
-    winCanvas.width = 128; winCanvas.height = 128;
-    const winCtx = winCanvas.getContext('2d');
-    winCtx.fillStyle = '#2a3040';
-    winCtx.fillRect(0, 0, 128, 128);
-    // 6×8 grid of windows, ~40% lit
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 6; col++) {
-        const lit = Math.random() < 0.4;
-        winCtx.fillStyle = lit ? '#ffe9a0' : '#1a2030';
-        winCtx.fillRect(8 + col * 18, 8 + row * 14, 12, 9);
-      }
-    }
-    const winTex = new THREE.CanvasTexture(winCanvas);
-    const winMat = new THREE.MeshLambertMaterial({ map: winTex });
-
-    // Buildings: InstancedMesh, scale per-instance for footprint/height
-    const bldGeo = new THREE.BoxGeometry(1, 1, 1);
-    const bldMesh = new THREE.InstancedMesh(bldGeo, winMat, 10);
-    const bldDummy = new THREE.Object3D();
-    // Place backstretch outside and beyond corners
-    const bldPositions = [
-      [+220, -180], [+240, -60], [+200, +60], [+230, +170],
-      [+200, -100], [+260, +20],
-      // beyond corners
-      [-30, -290], [+40, -310], [-50, +295], [+30, +315],
-    ];
-    for (let bi = 0; bi < bldPositions.length; bi++) {
-      const [bx, bz] = bldPositions[bi];
-      const footprint = 18 + Math.random() * 12;
-      const height    = 30 + Math.random() * 40;
-      bldDummy.position.set(bx, height / 2, bz);
-      bldDummy.rotation.set(0, 0, 0);
-      bldDummy.scale.set(footprint, height, footprint);
-      bldDummy.updateMatrix();
-      bldMesh.setMatrixAt(bi, bldDummy.matrix);
-    }
-    bldDummy.scale.set(1, 1, 1);
-    bldMesh.instanceMatrix.needsUpdate = true;
-    scene.add(bldMesh);
-
-    // Trees: cones + trunks (44 pairs, 8 in infield)
-    const treeGreenMat  = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
-    const treeBrownMat  = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
-    const coneGeo  = new THREE.ConeGeometry(2.2, 5, 6);
-    const trunkGeo = new THREE.CylinderGeometry(0.35, 0.45, 2.4, 5);
-    const treeCones  = new THREE.InstancedMesh(coneGeo,  treeGreenMat, 44);
-    const treeTrunks = new THREE.InstancedMesh(trunkGeo, treeBrownMat, 44);
-    const treeDummy = new THREE.Object3D();
-    let treeIdx = 0;
-    // 8 infield trees
-    for (let ti = 0; ti < 8; ti++) {
-      const tx = (Math.random() - 0.5) * 120;
-      const tz = (Math.random() - 0.5) * 160;
-      treeDummy.position.set(tx, 3.7, tz);
-      treeDummy.rotation.set(0, 0, 0);
-      treeDummy.scale.set(1, 1, 1);
-      treeDummy.updateMatrix();
-      treeCones.setMatrixAt(treeIdx, treeDummy.matrix);
-      treeDummy.position.set(tx, 1.2, tz);
-      treeDummy.updateMatrix();
-      treeTrunks.setMatrixAt(treeIdx, treeDummy.matrix);
-      treeIdx++;
-    }
-    // 36 outside the oval, excluding stand strip
-    let attempts = 0;
-    while (treeIdx < 44 && attempts < 2000) {
-      attempts++;
-      const ang = Math.random() * Math.PI * 2;
-      const dist = 150 + Math.random() * 50;
-      const tx = Math.cos(ang) * dist;
-      const tz = Math.sin(ang) * dist;
-      // Exclude stand strip: x < -145 and |z| < 220
-      if (tx < -145 && Math.abs(tz) < 220) continue;
-      treeDummy.position.set(tx, 3.7, tz);
-      treeDummy.rotation.set(0, 0, 0);
-      treeDummy.scale.set(1, 1, 1);
-      treeDummy.updateMatrix();
-      treeCones.setMatrixAt(treeIdx, treeDummy.matrix);
-      treeDummy.position.set(tx, 1.2, tz);
-      treeDummy.updateMatrix();
-      treeTrunks.setMatrixAt(treeIdx, treeDummy.matrix);
-      treeIdx++;
-    }
-    treeCones.instanceMatrix.needsUpdate = true;
-    treeTrunks.instanceMatrix.needsUpdate = true;
-    scene.add(treeCones);
-    scene.add(treeTrunks);
-
-    // Clouds: 5 planes with radial-gradient canvas texture
-    const cloudCanvas = document.createElement('canvas');
-    cloudCanvas.width = 64; cloudCanvas.height = 64;
-    const cCtx = cloudCanvas.getContext('2d');
-    const cGrad = cCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    cGrad.addColorStop(0,   'rgba(255,255,255,1)');
-    cGrad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
-    cGrad.addColorStop(1,   'rgba(255,255,255,0)');
-    cCtx.fillStyle = cGrad;
-    cCtx.fillRect(0, 0, 64, 64);
-    const cloudTex = new THREE.CanvasTexture(cloudCanvas);
-    const cloudMat = new THREE.MeshBasicMaterial({ map: cloudTex, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
-    const cloudPositions = [
-      [-200, 100, 0],
-      [300, 120, -80],
-      [-100, 90, 300],
-      [260, 130, 200],
-      [0, 110, -340],
-    ];
-    for (const [cpx, cpy, cpz] of cloudPositions) {
-      const cloudMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 24), cloudMat);
-      cloudMesh.position.set(cpx, cpy, cpz);
-      // Face the origin (rotate around Y then tilt slightly)
-      cloudMesh.lookAt(0, cpy, 0);
-      scene.add(cloudMesh);
-    }
   }
   buildCourse();
 
-  // ── Task 3: スターティングゲート ──
-  // Gate geometry constants (Q2)
-  const _GATE_LANE_COUNT = CONFIG.LANE_COUNT; // 12
-  // InstancedMeshes for gate parts (built once at startup, repositioned per race)
+  // ── Starting gate ──
   const gateSideMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
   const gateTopMat  = new THREE.MeshLambertMaterial({ color: 0xbbbbbb });
   const gateDoorMat = new THREE.MeshLambertMaterial({ color: 0xd8e8d8 });
-  // 2 sides per stall × 12 stalls = 24 instances
-  const gateSides = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 2.3, 1.6), gateSideMat, 24);
-  // 1 top per stall × 12 stalls = 12 instances
-  const gateTops  = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0,  0.25, 1.6), gateTopMat,  12);
-  // 1 door per stall × 12 stalls = 12 instances
-  const gateDoors = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 0.06), gateDoorMat, 12);
+  const gateSides = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 2.3, 1.6), gateSideMat, CONFIG.LANE_COUNT * 2);
+  const gateTops  = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0, 0.25, 1.6), gateTopMat, CONFIG.LANE_COUNT);
+  const gateDoors = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 0.06), gateDoorMat, CONFIG.LANE_COUNT);
+  // 距離ごとにゲート位置が大きく変わるため、InstancedMesh の視錐台カリングで
+  // ゲートだけが描画対象外になる事故を防ぐ。ゲートは軽量なので常時描画対象にする。
+  gateSides.frustumCulled = false;
+  gateTops.frustumCulled = false;
+  gateDoors.frustumCulled = false;
   gateSides.visible = false;
-  gateTops.visible  = false;
+  gateTops.visible = false;
   gateDoors.visible = false;
-  scene.add(gateSides);
-  scene.add(gateTops);
-  scene.add(gateDoors);
+  scene.add(gateSides); scene.add(gateTops); scene.add(gateDoors);
+  const gateDoorBase = Array.from({ length: CONFIG.LANE_COUNT }, () => new THREE.Vector3());
+  const gateDoorTheta = Array.from({ length: CONFIG.LANE_COUNT }, () => 0);
+  const gateDummy = new THREE.Object3D();
+  let gateDoorT = 0;
+  let gateHideTimer = 0;
 
-  // Per-door base position and heading angle, stored for animation
-  const _gateDoorBasePos = []; // Array of THREE.Vector3
-  const _gateDoorLatDir  = []; // Array of THREE.Vector3 (lateral unit)
-  const _gateDoorTheta   = []; // Array of Number (heading angle)
-  for (let i = 0; i < _GATE_LANE_COUNT; i++) {
-    _gateDoorBasePos.push(new THREE.Vector3());
-    _gateDoorLatDir.push(new THREE.Vector3());
-    _gateDoorTheta.push(0);
-  }
-
-  // Shared dummy for gate matrix computation
-  const _gateDummy = new THREE.Object3D();
-
-  // positionGate(startS): compute gate stall positions from course geometry
   function positionGate(startS) {
-    for (let i = 0; i < _GATE_LANE_COUNT; i++) {
+    for (let i = 0; i < CONFIG.LANE_COUNT; i++) {
       const [bx, , bz] = worldPos(startS, i);
-      // Lateral unit: numerical derivative across lane
       const [px, , pz] = worldPos(startS, i + 0.5);
       const [qx, , qz] = worldPos(startS, i - 0.5);
       const ldx = px - qx, ldz = pz - qz;
-      const llen = Math.sqrt(ldx * ldx + ldz * ldz) || 1;
+      const llen = Math.hypot(ldx, ldz) || 1;
       const latX = ldx / llen, latZ = ldz / llen;
-
-      // Forward unit from heading angle
       const theta = headingAngle(startS);
       const fwdX = Math.sin(theta), fwdZ = Math.cos(theta);
-
-      // Store for animation
-      _gateDoorBasePos[i].set(bx, 1.15, bz);
-      _gateDoorLatDir[i].set(latX, 0, latZ);
-      _gateDoorTheta[i] = theta;
-
-      // Side left: base - latDir * 1.0, y 1.15
-      _gateDummy.position.set(bx - latX * 1.0, 1.15, bz - latZ * 1.0);
-      _gateDummy.rotation.set(0, theta, 0);
-      _gateDummy.scale.set(1, 1, 1);
-      _gateDummy.updateMatrix();
-      gateSides.setMatrixAt(i * 2, _gateDummy.matrix);
-
-      // Side right: base + latDir * 1.0, y 1.15
-      _gateDummy.position.set(bx + latX * 1.0, 1.15, bz + latZ * 1.0);
-      _gateDummy.rotation.set(0, theta, 0);
-      _gateDummy.updateMatrix();
-      gateSides.setMatrixAt(i * 2 + 1, _gateDummy.matrix);
-
-      // Top bar: base, y 2.35
-      _gateDummy.position.set(bx, 2.35, bz);
-      _gateDummy.rotation.set(0, theta, 0);
-      _gateDummy.updateMatrix();
-      gateTops.setMatrixAt(i, _gateDummy.matrix);
-
-      // Door: base + fwd * 0.9, y 1.15 (closed, no rotation offset yet)
-      const doorX = bx + fwdX * 0.9;
-      const doorZ = bz + fwdZ * 0.9;
-      _gateDummy.position.set(doorX, 1.15, doorZ);
-      _gateDummy.rotation.set(0, theta, 0);
-      _gateDummy.updateMatrix();
-      gateDoors.setMatrixAt(i, _gateDummy.matrix);
+      gateDoorBase[i].set(bx + fwdX * 0.9, 1.15, bz + fwdZ * 0.9);
+      gateDoorTheta[i] = theta;
+      gateDummy.position.set(bx - latX * 1.0, 1.15, bz - latZ * 1.0);
+      gateDummy.rotation.set(0, theta, 0);
+      gateDummy.scale.set(1, 1, 1);
+      gateDummy.updateMatrix();
+      gateSides.setMatrixAt(i * 2, gateDummy.matrix);
+      gateDummy.position.set(bx + latX * 1.0, 1.15, bz + latZ * 1.0);
+      gateDummy.updateMatrix();
+      gateSides.setMatrixAt(i * 2 + 1, gateDummy.matrix);
+      gateDummy.position.set(bx, 2.35, bz);
+      gateDummy.updateMatrix();
+      gateTops.setMatrixAt(i, gateDummy.matrix);
+      gateDummy.position.copy(gateDoorBase[i]);
+      gateDummy.rotation.set(0, theta, 0);
+      gateDummy.updateMatrix();
+      gateDoors.setMatrixAt(i, gateDummy.matrix);
     }
     gateSides.instanceMatrix.needsUpdate = true;
-    gateTops.instanceMatrix.needsUpdate  = true;
+    gateTops.instanceMatrix.needsUpdate = true;
     gateDoors.instanceMatrix.needsUpdate = true;
   }
-
-  // gateSetVisible(v): restore/hide all gate parts
-  function gateSetVisible(v) {
-    gateSides.visible = v;
-    gateTops.visible  = v;
-    gateDoors.visible = v;
+  function gateSetVisible(v) { gateSides.visible = v; gateTops.visible = v; gateDoors.visible = v; }
+  function updateGateAnimation(dt) {
+    if (!gateDoors.visible) return;
+    gateDoorT = Math.min(1, gateDoorT + dt / 0.25);
+    const lift = gateDoorT * 1.8;
+    const openForward = gateDoorT * 1.2;
+    for (let i = 0; i < CONFIG.LANE_COUNT; i++) {
+      const theta = gateDoorTheta[i];
+      const fwdX = Math.sin(theta), fwdZ = Math.cos(theta);
+      gateDummy.position.set(gateDoorBase[i].x + fwdX * openForward, gateDoorBase[i].y + lift, gateDoorBase[i].z + fwdZ * openForward);
+      gateDummy.rotation.set(-gateDoorT * 0.85, theta, 0);
+      gateDummy.scale.set(1, 1, 1);
+      gateDummy.updateMatrix();
+      gateDoors.setMatrixAt(i, gateDummy.matrix);
+    }
+    gateDoors.instanceMatrix.needsUpdate = true;
+    if (gateDoorT >= 1) gateDoors.visible = false;
   }
 
-  // Gate animation state
-  let gateDoorT     = 0;   // 0→1 over 0.25s as doors swing up
-  let _gateHideTimer = -1; // countdown: sides/tops hide 1.5s after running begins
 
   // ── Weather system ──
 
@@ -2168,15 +1847,21 @@
   function _ensureRain() {
     if (rainPoints) return;
     const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(CONFIG.RAIN_COUNT * 3);
+    const positions = new Float32Array(CONFIG.RAIN_COUNT * 6);
     for (let i = 0; i < CONFIG.RAIN_COUNT; i++) {
-      positions[i * 3]     = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 1] = Math.random() * 40;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+      const x = (Math.random() - 0.5) * 60;
+      const y = Math.random() * 40;
+      const z = (Math.random() - 0.5) * 60;
+      positions[i * 6]     = x;
+      positions[i * 6 + 1] = y;
+      positions[i * 6 + 2] = z;
+      positions[i * 6 + 3] = x;
+      positions[i * 6 + 4] = y - 1.8;
+      positions[i * 6 + 5] = z;
     }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({ color: 0xaac4dd, size: 0.18, transparent: true, opacity: 0.65 });
-    rainPoints = new THREE.Points(geo, mat);
+    const mat = new THREE.LineBasicMaterial({ color: 0xaac4dd, transparent: true, opacity: 0.65 });
+    rainPoints = new THREE.LineSegments(geo, mat);
     rainPoints.visible = false;
     scene.add(rainPoints);
   }
@@ -2189,13 +1874,15 @@
     const pos = rainPoints.geometry.attributes.position.array;
     const drop = CONFIG.RAIN_SPEED * dt;
     for (let i = 0; i < CONFIG.RAIN_COUNT; i++) {
-      pos[i * 3 + 1] -= drop;
-      if (pos[i * 3 + 1] < -2) {
-        pos[i * 3 + 1] += 42; // wrap to top
+      const base = i * 6;
+      pos[base + 1] -= drop;
+      pos[base + 4] -= drop;
+      if (pos[base + 1] < -2) {
+        pos[base + 1] += 42;
+        pos[base + 4] += 42;
       }
     }
     rainPoints.geometry.attributes.position.needsUpdate = true;
-    // Re-center on camera (cheap; integer-snap to avoid micro jitter)
     rainPoints.position.x = Math.round(camera.position.x);
     rainPoints.position.z = Math.round(camera.position.z);
   }
@@ -2241,9 +1928,6 @@
   }
 
   // ── Horse model ──
-  // 全頭で共有するジオメトリ表。モデルは index.html 読込時に1回だけ生成する。
-  // 各ジオメトリに userData.shared=true を付け、disposeObject3D で破棄されないようにする。
-  // （per-horse で新規生成するのはマテリアルとメッシュのみ）
   function _sharedGeo(geo) { geo.userData.shared = true; return geo; }
   const HORSE_GEO = {
     chest:   _sharedGeo(new THREE.BoxGeometry(0.62, 0.62, 1.15)),
@@ -2263,25 +1947,20 @@
     jLeg:    _sharedGeo(new THREE.BoxGeometry(0.08, 0.26, 0.1)),
   };
 
-  // ギャロップ（横走法 transverse gallop）の脚位相オフセット。順序: 後左・後右・前左・前右。
-  // hind フラグは膝（飛節）の曲がる向きを反転させるために使う。
   const HORSE_LEG_DEF = [
-    { x: -0.19, y: 0.98, z: -0.70, off: 0.0  * Math.PI * 2, hind: true  }, // hind left
-    { x:  0.19, y: 0.98, z: -0.70, off: 0.15 * Math.PI * 2, hind: true  }, // hind right
-    { x: -0.21, y: 1.00, z:  0.72, off: 0.5  * Math.PI * 2, hind: false }, // front left
-    { x:  0.21, y: 1.00, z:  0.72, off: 0.65 * Math.PI * 2, hind: false }, // front right
+    { x: -0.19, y: 0.98, z: -0.70, off: 0.0  * Math.PI * 2, hind: true  },
+    { x:  0.19, y: 0.98, z: -0.70, off: 0.15 * Math.PI * 2, hind: true  },
+    { x: -0.21, y: 1.00, z:  0.72, off: 0.5  * Math.PI * 2, hind: false },
+    { x:  0.21, y: 1.00, z:  0.72, off: 0.65 * Math.PI * 2, hind: false },
   ];
 
   function createHorseModel(color, silksColor) {
     const g = new THREE.Group();
-
-    // Per-horse materials only (geometries are shared).
     const coatMat  = new THREE.MeshLambertMaterial({ color });
-    const darkMat  = new THREE.MeshLambertMaterial({ color: 0x2a1a0a }); // legs/mane/tail
+    const darkMat  = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
     const silksMat = new THREE.MeshLambertMaterial({ color: silksColor });
     const capMat   = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
-    // ── Body (chest + hip) ──
     const body = new THREE.Group();
     const chest = new THREE.Mesh(HORSE_GEO.chest, coatMat);
     chest.position.set(0, 1.08, 0.42);
@@ -2291,21 +1970,19 @@
     body.add(hip);
     g.add(body);
 
-    // ── Neck → head → muzzle / ears ──
     const neckPivot = new THREE.Group();
     neckPivot.position.set(0, 1.28, 0.92);
     neckPivot.rotation.x = -0.6;
     const neck = new THREE.Mesh(HORSE_GEO.neck, coatMat);
     neck.position.set(0, 0.32, 0);
     neckPivot.add(neck);
-
     const headPivot = new THREE.Group();
-    headPivot.position.set(0, 0.66, 0.05); // neck top
-    headPivot.rotation.x = 0.9;            // head angled down-forward
+    headPivot.position.set(0, 0.66, 0.05);
+    headPivot.rotation.x = 0.9;
     const head = new THREE.Mesh(HORSE_GEO.head, coatMat);
     headPivot.add(head);
     const muzzle = new THREE.Mesh(HORSE_GEO.muzzle, coatMat);
-    muzzle.position.set(0, -0.03, 0.34); // in front of head
+    muzzle.position.set(0, -0.03, 0.34);
     headPivot.add(muzzle);
     const earL = new THREE.Mesh(HORSE_GEO.ear, darkMat);
     earL.position.set(-0.07, 0.2, -0.12);
@@ -2318,7 +1995,6 @@
     neckPivot.add(headPivot);
     g.add(neckPivot);
 
-    // ── Legs (upper + lower, knee pivot). Order matches HORSE_LEG_DEF. ──
     const legs = HORSE_LEG_DEF.map(def => {
       const pivot = new THREE.Group();
       pivot.position.set(def.x, def.y, def.z);
@@ -2326,7 +2002,7 @@
       upper.position.set(0, -0.24, 0);
       pivot.add(upper);
       const knee = new THREE.Group();
-      knee.position.set(0, -0.5, 0); // bottom of upper leg
+      knee.position.set(0, -0.5, 0);
       const lower = new THREE.Mesh(HORSE_GEO.lowerLeg, darkMat);
       lower.position.set(0, -0.24, 0);
       knee.add(lower);
@@ -2335,15 +2011,14 @@
       return { pivot, knee, off: def.off, hind: def.hind };
     });
 
-    // ── Tail (2 segments, second lags) ──
     const tailPivot = new THREE.Group();
     tailPivot.position.set(0, 1.22, -1.0);
-    tailPivot.rotation.x = 0.7; // flowing back-down
+    tailPivot.rotation.x = 0.7;
     const tail1 = new THREE.Mesh(HORSE_GEO.tail, darkMat);
     tail1.position.set(0, -0.21, 0);
     tailPivot.add(tail1);
     const tail2Pivot = new THREE.Group();
-    tail2Pivot.position.set(0, -0.42, 0); // tip of seg1
+    tail2Pivot.position.set(0, -0.42, 0);
     const tail2 = new THREE.Mesh(HORSE_GEO.tail, darkMat);
     tail2.scale.setScalar(0.7);
     tail2.position.set(0, -0.15, 0);
@@ -2351,14 +2026,11 @@
     tailPivot.add(tail2Pivot);
     g.add(tailPivot);
 
-    // ── Jockey (deep crouch) ──
     const jockey = new THREE.Group();
     jockey.position.set(0, 1.5, -0.05);
     const torso = new THREE.Mesh(HORSE_GEO.jTorso, silksMat);
-    torso.rotation.x = 0.75; // deep crouch
-    torso.position.set(0, 0, 0);
+    torso.rotation.x = 0.75;
     jockey.add(torso);
-    // head + cap in front-top of torso
     const jHead = new THREE.Mesh(HORSE_GEO.jHead, capMat);
     jHead.position.set(0, 0.2, 0.22);
     jockey.add(jHead);
@@ -2368,81 +2040,55 @@
     const jCapBrim = new THREE.Mesh(HORSE_GEO.jCapBrim, capMat);
     jCapBrim.position.set(0, 0.22, 0.34);
     jockey.add(jCapBrim);
-    // legs bent against flanks
     const jLegL = new THREE.Mesh(HORSE_GEO.jLeg, silksMat);
     jLegL.position.set(-0.14, -0.18, 0.02);
     jockey.add(jLegL);
     const jLegR = new THREE.Mesh(HORSE_GEO.jLeg, silksMat);
     jLegR.position.set(0.14, -0.18, 0.02);
     jockey.add(jLegR);
-    // arms angled forward-down toward neck; right arm under its own whipArmPivot
     const jArmL = new THREE.Mesh(HORSE_GEO.jArm, silksMat);
     jArmL.position.set(-0.14, 0.04, 0.22);
     jArmL.rotation.x = -0.9;
     jockey.add(jArmL);
     const whipArmPivot = new THREE.Group();
     whipArmPivot.position.set(0.14, 0.18, 0.02);
-    whipArmPivot.rotation.x = -0.9; // rest
+    whipArmPivot.rotation.x = -0.9;
     const jArmR = new THREE.Mesh(HORSE_GEO.jArm, silksMat);
-    jArmR.position.set(0, -0.15, 0.04); // hang from shoulder pivot
+    jArmR.position.set(0, -0.15, 0.04);
     whipArmPivot.add(jArmR);
     jockey.add(whipArmPivot);
     g.add(jockey);
 
-    // Animation refs (no per-frame allocation; baseY captured for body bob).
-    g.userData.anim = {
-      body,
-      baseY: body.position.y, // 0 (group origin), bob added on top
-      neckPivot,
-      headPivot,
-      tailPivot,
-      tail2: tail2Pivot,
-      legs,
-      whipArmPivot,
-      whipBase: whipArmPivot.rotation.x,
-    };
-
+    g.userData.anim = { body, baseY: body.position.y, neckPivot, headPivot, tailPivot, tail2: tail2Pivot, legs, whipArmPivot, whipBase: whipArmPivot.rotation.x };
     return g;
   }
 
-  // ── Gallop animation for one horse (no per-frame allocations) ──
   function animateHorse(mesh, h, isPlayer) {
     const a = mesh.userData.anim;
+    if (!a) return;
     const p = h.legPhase;
-    const run = Math.min(1, h.speed / 10); // standing(0)→galloping(1)
-
-    // Legs: upper swing + knee fold.
+    const run = Math.min(1, h.speed / 10);
     for (let k = 0; k < a.legs.length; k++) {
       const L = a.legs[k];
       const ph = p + L.off;
       L.pivot.rotation.x = (Math.sin(ph) * 0.78 - 0.08) * run;
-      // hind knees (hocks) bend backwards → negative multiplier
       const sign = L.hind ? -1.0 : 1.15;
       L.knee.rotation.x = Math.max(0, Math.sin(ph + 0.9)) * sign * run;
     }
-
-    // Body bob + pitch.
     a.body.position.y = a.baseY + Math.abs(Math.sin(p)) * 0.07 * run;
     a.body.rotation.x = Math.sin(p) * 0.05 * run;
-
-    // Neck counter-bob.
     a.neckPivot.rotation.x = -0.6 + Math.sin(p + Math.PI) * 0.09 * run;
-
-    // Tail flow.
     a.tailPivot.rotation.x = 0.7 + Math.sin(p) * 0.12 * run;
     a.tailPivot.rotation.z = Math.sin(p * 0.7) * 0.18 * run;
     a.tail2.rotation.x = Math.sin(p - 0.6) * 0.25 * run;
-
-    // Whip swing (player only) — short burst at the start of the whip effect.
     if (isPlayer && h.whipTimer > CONFIG.WHIP_DURATION - 0.35) {
-      const t = (CONFIG.WHIP_DURATION - h.whipTimer) / 0.35; // 0→1 over the burst
+      const t = (CONFIG.WHIP_DURATION - h.whipTimer) / 0.35;
       a.whipArmPivot.rotation.x = a.whipBase + Math.sin(t * Math.PI) * 1.1;
     } else {
       a.whipArmPivot.rotation.x = a.whipBase;
     }
   }
 
-  // ── Pseudo shadows (single InstancedMesh, persistent — never disposed) ──
   const SHADOW_MAX = 12;
   const instancedShadows = new THREE.InstancedMesh(
     new THREE.CircleGeometry(1, 12),
@@ -2451,8 +2097,6 @@
   );
   instancedShadows.renderOrder = 1;
   instancedShadows.count = SHADOW_MAX;
-  // Initialize all instances to zero scale so nothing shows before the first race.
-  // YXZ order so rotation.y (heading) is applied in the WORLD frame AFTER the flat tilt.
   const _shadowDummy = new THREE.Object3D();
   _shadowDummy.rotation.order = 'YXZ';
   _shadowDummy.scale.set(0, 0, 0);
@@ -2465,24 +2109,19 @@
   function updateHorseMeshes(state, frameCount) {
     const playerPos = horseMeshes[state.playerIndex].position;
     state.horses.forEach((h, i) => {
-      const cs = state.startS + h.progress; // コース位置
+      const cs = state.startS + h.progress;
       const [x, , z] = worldPos(cs, h.laneF);
       const heading = headingAngle(cs);
       const mesh = horseMeshes[i];
       mesh.position.set(x, 0, z);
       mesh.rotation.y = heading;
 
-      // Gallop animation with performance gating (distant horses animate less often).
       const dist = Math.hypot(x - playerPos.x, z - playerPos.z);
       const animEvery = dist > 120 ? 0 : dist > 50 ? 3 : 1;
       if (animEvery > 0 && frameCount % animEvery === 0) {
         animateHorse(mesh, h, i === state.playerIndex);
       }
 
-      // Shadow follows every frame (outside the anim gating) so position tracks
-      // even when the leg animation is skipped for distant horses.
-      // Flat tilt (x=-π/2) maps local Y→world Z; heading via world Y (YXZ order).
-      // Local scale (0.85, 1.85) → world ellipse: 0.85 across, 1.85 along heading.
       _shadowDummy.position.set(x, 0.02, z);
       _shadowDummy.rotation.set(-Math.PI / 2, heading, 0);
       _shadowDummy.scale.set(0.85, 1.85, 1);
@@ -2493,10 +2132,6 @@
   }
 
   // ── Camera ──
-  // Q3: カメラ演出用の再利用ベクトル・ロール状態（毎フレームのアロケーション禁止）
-  const _camTarget = new THREE.Vector3();
-  let _camRoll = 0;
-
   function updateCamera(state) {
     const h = state.horses[state.playerIndex];
     const cs = state.startS + h.progress; // コース位置
@@ -2506,8 +2141,11 @@
     const bx = -Math.sin(ang);
     const bz = -Math.cos(ang);
 
-    _camTarget.set(px + bx * 8, 3.2, pz + bz * 8);
-    camera.position.lerp(_camTarget, 0.12);
+    const targetX = px + bx * 8;
+    const targetZ = pz + bz * 8;
+    const targetY = 3.2;
+
+    camera.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.12);
 
     const speedFrac = h.speed / h.maxSpeed;
     // Camera shake
@@ -2515,26 +2153,13 @@
     camera.position.x += (Math.random() - 0.5) * shake;
     camera.position.y += (Math.random() - 0.5) * shake * 0.5;
 
-    // 視線はやや進行方向の先へ（コーナーで自然に内を向く）
-    camera.lookAt(px - bx * 4, 0.7, pz - bz * 4);
-
-    // コーナーバンク：少し先の向きとの差分から目標ロールを作り、滑らかに追従
-    let dAng = headingAngle(cs + 6) - ang;
-    if (dAng > Math.PI) dAng -= Math.PI * 2;
-    else if (dAng < -Math.PI) dAng += Math.PI * 2;
-    const targetRoll = Math.max(-0.05, Math.min(0.05, dAng * 1.4)) * speedFrac;
-    _camRoll += (targetRoll - _camRoll) * 0.08;
-    camera.rotateZ(_camRoll);
+    camera.lookAt(px, 0.5, pz);
 
     camera.fov = 65 + speedFrac * 10;
     camera.updateProjectionMatrix();
   }
 
   // ==== SECTION: GAME-LOOP ====
-
-  // Q4: バイブレーションヘルパー
-  function vibe(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
-
   let raceState = null;
   let horseMeshes = [];
   let shownResults = false;
@@ -2550,13 +2175,53 @@
   // Whether player has finished (enables fast-forward of remaining horses)
   let playerFinished = false;
 
-  // ゴール前接戦スローモーション（game-spec 9章の任意項目）。1レース1回・プレイヤー完走前のみ。
-  // playerFinished の早送りとは状態的に相互排他（完走した瞬間に解除する）
-  let slowMoT = 0;       // 残り実時間
+  // Restored close-finish slow motion cue
+  let slowMoT = 0;
   let slowMoUsed = false;
 
-  // タイトル背後のアイドルカメラ周回
-  let idleT = 0;
+  // ── Restored goal effects and close-finish cue ──
+  let goalFxTimers = [];
+  function triggerGoalFx(state) {
+    const flash = document.getElementById('goalFlash');
+    if (flash) {
+      flash.classList.add('on');
+      goalFxTimers.push(setTimeout(() => flash.classList.remove('on'), 180));
+    }
+    const res = state.results.find(r => r.index === state.playerIndex);
+    if (res && res.rank === 1) {
+      const box = document.getElementById('confettiBox');
+      if (box) {
+        box.style.display = 'block';
+        box.innerHTML = '';
+        const colors = ['#ffe066', '#44aaff', '#ff6688', '#66dd88', '#ffaa44', '#cc88ff'];
+        for (let i = 0; i < 30; i++) {
+          const c = document.createElement('span');
+          c.className = 'confetti';
+          c.style.left = (Math.random() * 100) + '%';
+          c.style.background = colors[i % colors.length];
+          c.style.animationDelay = (Math.random() * 0.5) + 's';
+          box.appendChild(c);
+        }
+        goalFxTimers.push(setTimeout(() => { box.style.display = 'none'; box.innerHTML = ''; }, 3200));
+      }
+    }
+  }
+  function showSlowMoCue() {
+    const cue = document.getElementById('slowMoCue');
+    if (!cue) return;
+    cue.style.display = 'block';
+    goalFxTimers.push(setTimeout(() => { cue.style.display = 'none'; }, 1000));
+  }
+  function clearGoalFx() {
+    goalFxTimers.forEach(clearTimeout);
+    goalFxTimers = [];
+    document.getElementById('goalFlash')?.classList.remove('on');
+    const box = document.getElementById('confettiBox');
+    if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+    const cue = document.getElementById('slowMoCue');
+    if (cue) cue.style.display = 'none';
+  }
+
 
   function gameLoop(now) {
     requestAnimationFrame(gameLoop);
@@ -2564,12 +2229,14 @@
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
 
-    // 馬の擬似影はレース中（gate/running）だけ表示。raceState が無い間は隠す
-    // （updateHorseMeshes が呼ばれず行列が固まるため visible で確実に消す）。
     instancedShadows.visible = !!raceState;
+    if (gateSignalFired) updateGateAnimation(dt);
+    if (racePhase === 'running' && gateHideTimer > 0) {
+      gateHideTimer -= dt;
+      if (gateHideTimer <= 0) { gateSides.visible = false; gateTops.visible = false; }
+    }
 
     if (raceState && racePhase === 'running' && !shownResults) {
-      // 接戦判定：残り100m以内で最寄りの未完走ライバルとの差が1.5m未満→0.4倍速を実時間1.6s
       if (!slowMoUsed && !playerFinished) {
         const p = raceState.horses[raceState.playerIndex];
         const remain = raceState.cond.distance - p.progress;
@@ -2591,12 +2258,8 @@
       }
       let simSpeed = 1;
       if (slowMoT > 0) {
-        if (playerFinished) {
-          slowMoT = 0; // 完走後の早送りと相互排他
-        } else {
-          simSpeed = 0.4;
-          slowMoT -= dt;
-        }
+        if (playerFinished) slowMoT = 0;
+        else { simSpeed = 0.4; slowMoT -= dt; }
       }
       accumulator += dt * simSpeed;
       accumulator = Math.min(accumulator, 0.1);
@@ -2604,9 +2267,7 @@
       let stepCount = 0;
       while (accumulator >= SIM_DT && stepCount < MAX_STEPS_PER_FRAME) {
         stepRace(raceState, SIM_DT, currentInput);
-        // 進路変更はワンショット：1ステップで消費し即クリア（1スワイプ＝1レーンを保証。
-        // 80ms等の時間クリアだと複数ステップが走って数レーン流れるバグになる）
-        currentInput.laneDir = 0;
+        currentInput.laneDir = 0; // 1入力=1レーンに固定
         accumulator -= SIM_DT;
         steppedThisFrame = true;
         stepCount++;
@@ -2623,7 +2284,13 @@
       // Check if player just finished this frame
       if (!playerFinished && raceState.horses[raceState.playerIndex].finished) {
         playerFinished = true;
-        triggerGoalFx(raceState); // ゴールフラッシュ＋1着なら紙吹雪
+        triggerGoalFx(raceState);
+      }
+
+      const playerHorse = raceState.horses[raceState.playerIndex];
+      if (playerHorse.whipCount > lastPlayerWhipCount) {
+        lastPlayerWhipCount = playerHorse.whipCount;
+        showWhipEffect();
       }
 
       // 鞭はエッジトリガ：stepRaceが走って消費した場合だけクリア（1タップ＝1発）。
@@ -2634,72 +2301,18 @@
       updateCamera(raceState);
       if (!playerFinished) updateHUD(raceState);
       updateMiniMap(raceState);
-      updateAudio(raceState, dt); // Q5: 蹄音＋歓声スウェル（内部で音OFF/未初期化をガード）
 
       if (raceState.finishedCount === 12 && !shownResults) {
         shownResults = true;
         // Hide HUD/controls and start ceremony
         document.getElementById('hud').style.display = 'none';
         document.getElementById('controls').style.display = 'none';
-        document.getElementById('btnSoundRace').style.display = 'none'; // Q5: HUDと連動
         showCeremony(raceState);
       }
     } else if (raceState && racePhase === 'gate') {
       // Still render / update camera while in gate screen
       updateHorseMeshes(raceState, frameCount);
       updateCamera(raceState);
-    } else if (!raceState && racePhase === 'idle') {
-      // タイトル背後のアイドルカメラ：コースをゆっくり周回（タイトル背景は半透明）
-      idleT += dt;
-      _camRoll = 0;
-      const s = (idleT * 9) % CONFIG.LAP_LEN;
-      const [ix, , iz] = worldPos(s, 4);
-      camera.position.set(ix * 1.25, 26, iz * 1.25);
-      camera.lookAt(ix * 0.4, 2, iz * 0.4);
-      camera.fov = 60;
-      camera.updateProjectionMatrix();
-    }
-
-    // ── Task 3: スターティングゲート ドアアニメ ──
-    // Doors swing UP around their top edge when running begins.
-    // Side/top panels hide 1.5s after running begins.
-    if (racePhase === 'running') {
-      if (gateDoorT < 1 && gateDoors.visible) {
-        gateDoorT = Math.min(1, gateDoorT + dt / 0.25);
-        const openAngle = gateDoorT * -1.6; // swing up -1.6 rad around top edge
-        for (let gi = 0; gi < _GATE_LANE_COUNT; gi++) {
-          const basePos = _gateDoorBasePos[gi]; // center of closed door
-          const theta   = _gateDoorTheta[gi];
-          // Hinge at door top edge: translate up 0.75 (half door height), rotate, translate back
-          // Compose: T(0,0.75,0) * Rx(openAngle) * T(0,-0.75,0)
-          // In world space: hinge = basePos + (0, 0.75, 0)
-          const hx = basePos.x, hy = basePos.y + 0.75, hz = basePos.z;
-          // Offset from hinge to door center after rotation
-          const offY =  Math.cos(openAngle) * (-0.75);
-          // Forward direction (door faces fwd)
-          const fwdX = Math.sin(theta), fwdZ = Math.cos(theta);
-          const offFwd = Math.sin(openAngle) * (-0.75);
-          _gateDummy.position.set(
-            hx + fwdX * offFwd,
-            hy + offY,
-            hz + fwdZ * offFwd
-          );
-          _gateDummy.rotation.set(openAngle, theta, 0);
-          _gateDummy.scale.set(1, 1, 1);
-          _gateDummy.updateMatrix();
-          gateDoors.setMatrixAt(gi, _gateDummy.matrix);
-        }
-        gateDoors.instanceMatrix.needsUpdate = true;
-        if (gateDoorT >= 1) gateDoors.visible = false;
-      }
-      // 1.5s timer: hide sides and tops
-      if (_gateHideTimer > 0) {
-        _gateHideTimer -= dt;
-        if (_gateHideTimer <= 0) {
-          gateSides.visible = false;
-          gateTops.visible  = false;
-        }
-      }
     }
 
     // Rain update runs every frame when visible (gate or running)
@@ -2716,50 +2329,6 @@
 
   requestAnimationFrame(gameLoop);
 
-  // ── Q3: ゴール演出（フラッシュ＋1着紙吹雪）と接戦キュー ──
-  let goalFxTimers = [];
-
-  function triggerGoalFx(state) {
-    vibe(30); // Q4: player crosses goal
-    playGoal(state.results.find(r => r.index === state.playerIndex)?.rank); // Q5: 着順別ゴール音
-    const flash = document.getElementById('goalFlash');
-    flash.classList.add('on');
-    goalFxTimers.push(setTimeout(() => flash.classList.remove('on'), 180));
-
-    const res = state.results.find(r => r.index === state.playerIndex);
-    if (res && res.rank === 1) {
-      const box = document.getElementById('confettiBox');
-      box.style.display = 'block';
-      box.innerHTML = '';
-      const colors = ['#ffe066', '#44aaff', '#ff6688', '#66dd88', '#ffaa44', '#cc88ff'];
-      for (let i = 0; i < 30; i++) {
-        const c = document.createElement('span');
-        c.className = 'confetti';
-        c.style.left = (Math.random() * 100) + '%';
-        c.style.background = colors[i % colors.length];
-        c.style.animationDelay = (Math.random() * 0.5) + 's';
-        box.appendChild(c);
-      }
-      goalFxTimers.push(setTimeout(() => { box.style.display = 'none'; box.innerHTML = ''; }, 3200));
-    }
-  }
-
-  function showSlowMoCue() {
-    const cue = document.getElementById('slowMoCue');
-    cue.style.display = 'block';
-    goalFxTimers.push(setTimeout(() => { cue.style.display = 'none'; }, 1000));
-  }
-
-  function clearGoalFx() {
-    goalFxTimers.forEach(clearTimeout);
-    goalFxTimers = [];
-    document.getElementById('goalFlash').classList.remove('on');
-    const box = document.getElementById('confettiBox');
-    box.style.display = 'none';
-    box.innerHTML = '';
-    document.getElementById('slowMoCue').style.display = 'none';
-  }
-
   // Keep renderer/camera in sync with viewport
   window.addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
@@ -2768,79 +2337,98 @@
   });
 
   // ==== SECTION: HUD ====
-
-  // Q4: module-level HUD state flags
-  let _lastStaminaBand = -1;  // 0=green, 1=yellow, 2=red
-  let _wasKakari = false;
-  let _milestonesCrossed = new Set();
-  let _milestoneTimer = null;
-  let _firstHintTimer = null;
-
-  // ── Mini map setup (dots created once) ──
   const miniDots = [];
   let miniMapBarW = 0;
-
-  (function initMiniMap() {
+  function initMiniMap() {
     const bar = document.getElementById('miniMap');
+    if (!bar || miniDots.length > 0) return;
     for (let i = 0; i < 12; i++) {
       const d = document.createElement('div');
       d.className = 'mm-dot';
       bar.appendChild(d);
       miniDots.push(d);
     }
-    miniMapBarW = bar.offsetWidth || 200;
-  })();
-
-  window.addEventListener('resize', () => {
-    const bar = document.getElementById('miniMap');
-    if (bar) miniMapBarW = bar.offsetWidth || miniMapBarW;
-  });
-
-  // Q4: マイルストーントースト要素（HUD section でキャッシュ）
-  const _milestoneEl = document.getElementById('milestoneToast');
-  function showMilestoneToast(text, color, duration) {
-    if (!_milestoneEl) return;
-    clearTimeout(_milestoneTimer);
-    _milestoneEl.textContent = text;
-    _milestoneEl.style.color = color;
-    _milestoneEl.style.fontSize = color === '#ffd700' ? '22px' : '18px';
-    _milestoneEl.style.display = 'block';
-    _milestoneTimer = setTimeout(() => { _milestoneEl.style.display = 'none'; }, duration);
-    playTick(duration === 1000); // Q5: ティック（最後の直線＝dur1000 は2連）
+    measureMiniMapWidth();
   }
-
-  // Assign dot colors/sizes from horse definitions (called at race start)
-  function setupMiniMapDots(field, playerIdx) {
-    for (let i = 0; i < 12; i++) {
+  function measureMiniMapWidth() {
+    const bar = document.getElementById('miniMap');
+    if (!bar) return;
+    const w = bar.getBoundingClientRect().width;
+    if (w > 0) miniMapBarW = w;
+  }
+  function setupMiniMapDots(field, playerIndex) {
+    initMiniMap();
+    for (let i = 0; i < miniDots.length; i++) {
       const d = miniDots[i];
-      const isPlayer = i === playerIdx;
-      if (isPlayer) {
-        d.style.width = '11px';
-        d.style.height = '11px';
-        d.style.background = '#ffe066';
-        d.style.border = '2px solid #fff';
-        d.style.zIndex = '5';
-      } else {
-        d.style.width = '7px';
-        d.style.height = '7px';
-        d.style.background = hexColor(field[i].silks);
-        d.style.border = 'none';
-        d.style.zIndex = '2';
-      }
+      const isPlayer = i === playerIndex;
+      d.style.width = isPlayer ? '11px' : '7px';
+      d.style.height = isPlayer ? '11px' : '7px';
+      d.style.background = isPlayer ? '#ffe066' : hexColor(field[i].silks);
+      d.style.border = isPlayer ? '2px solid #fff' : 'none';
+      d.style.zIndex = isPlayer ? '5' : '2';
       d.style.transform = 'translate(0,-50%)';
     }
   }
-
-  // Update dot positions every frame (no DOM query, no layout-triggering style.left)
   function updateMiniMap(state) {
+    if (!miniDots.length || !miniMapBarW) return;
     const dist = state.cond.distance;
-    const barW = miniMapBarW;
     for (let i = 0; i < state.horses.length; i++) {
       const h = state.horses[i];
-      const isPlayer = i === state.playerIndex;
-      const dotW = isPlayer ? 11 : 7;
-      const x = Math.min(1, h.progress / dist) * (barW - dotW);
+      const dotW = i === state.playerIndex ? 11 : 7;
+      const x = Math.min(1, h.progress / dist) * (miniMapBarW - dotW);
       miniDots[i].style.transform = `translate(${x}px,-50%)`;
+    }
+  }
+  window.addEventListener('resize', measureMiniMapWidth);
+
+
+  let _milestonesCrossed = new Set();
+  let _milestoneTimer = null;
+  function showMilestoneToast(text) {
+    const el = document.getElementById('milestoneToast');
+    if (!el) return;
+    clearTimeout(_milestoneTimer);
+    el.textContent = text;
+    el.style.display = 'block';
+    _milestoneTimer = setTimeout(() => { el.style.display = 'none'; }, 850);
+  }
+
+  function canChangeLane(dir) {
+    if (!raceState) return false;
+    const h = raceState.horses[raceState.playerIndex];
+    const target = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, h.targetLane + dir));
+    if (target === h.targetLane) return false;
+    return !raceState.horses.some((o, j) => j !== raceState.playerIndex && !o.finished &&
+      Math.abs(o.progress - h.progress) < CONFIG.LANE_CHANGE_BLOCK && Math.abs(o.laneF - target) < 0.8);
+  }
+
+  let laneToastTimer = null;
+  function showLaneToast(dir) {
+    if (racePhase !== 'running' || !raceState) return;
+    const el = document.getElementById('laneToast');
+    if (!el) return;
+    clearTimeout(laneToastTimer);
+    if (canChangeLane(dir)) {
+      el.textContent = dir < 0 ? '右へ' : '左へ';
+      el.style.color = '#fff';
+    } else {
+      el.textContent = '進路なし';
+      el.style.color = '#ff6666';
+    }
+    el.style.display = 'block';
+    laneToastTimer = setTimeout(() => { el.style.display = 'none'; }, 500);
+  }
+
+  let whipFxUntil = 0;
+  let whipToastTimer = null;
+  let lastPlayerWhipCount = 0;
+  function showWhipEffect() {
+    whipFxUntil = performance.now() + 700;
+    const el = document.getElementById('whipEffectToast');
+    if (el) {
+      clearTimeout(whipToastTimer);
+      el.style.display = 'block';
+      whipToastTimer = setTimeout(() => { el.style.display = 'none'; }, 700);
     }
   }
 
@@ -2856,86 +2444,45 @@
 
     const stPct = (h.stamina / CONFIG.STAMINA_MAX * 100).toFixed(1);
     const spPct = (h.speed / h.maxSpeed * 100).toFixed(1);
-    // Q4: スタミナバー色帯切り替え（帯が変わったときだけ style 更新）
-    const stFrac = h.stamina / CONFIG.STAMINA_MAX;
-    const stBand = stFrac > 0.5 ? 0 : stFrac > 0.25 ? 1 : 2;
     const stEl = document.getElementById('hudStaminaFill');
     stEl.style.width = stPct + '%';
-    if (stBand !== _lastStaminaBand) {
-      _lastStaminaBand = stBand;
-      stEl.style.background = stBand === 0 ? '#44ff44' : stBand === 1 ? '#ffd24a' : '#ff5555';
-      if (stBand === 2) stEl.classList.add('low'); else stEl.classList.remove('low');
-    }
-    document.getElementById('hudSpeedFill').style.width = spPct + '%';
+    stEl.style.background = h.stamina < CONFIG.STAMINA_MAX * 0.15 ? '#ff4444' :
+                             h.stamina < CONFIG.STAMINA_MAX * 0.30 ? '#ffaa00' : '#44ff44';
+    const speedEl = document.getElementById('hudSpeedFill');
+    speedEl.style.width = spPct + '%';
+    const whipActive = performance.now() < whipFxUntil;
+    speedEl.classList.toggle('whip-active', whipActive);
 
     // 戦術バッジ（風よけ／前が壁／掛かり）
     document.getElementById('badgeSlip').style.display   = h.inSlip   ? 'inline-block' : 'none';
     document.getElementById('badgeWall').style.display   = h.isWalled ? 'inline-block' : 'none';
     document.getElementById('badgeKakari').style.display = h.isKakari ? 'inline-block' : 'none';
-    // Q4: 掛かり発生時バイブ
-    if (h.isKakari && !_wasKakari) { vibe(40); playKakariAlert(); } // Q5: 掛かり警告ビープ
-    _wasKakari = h.isKakari;
 
     // 鞭ボタンの使用可否表示（仕様7.2）
     const whipBtn = document.getElementById('btnWhip');
     const whipUnavailable = h.whipCdTimer > 0 || h.stamina <= 0 || h.isKakari;
     whipBtn.style.opacity = whipUnavailable ? '0.35' : '1';
-    document.getElementById('btnWhipSub').style.display =
-      (h.whipEff < 0.8 && !whipUnavailable) ? 'block' : 'none';
+    const whipSub = document.getElementById('btnWhipSub');
+    if (performance.now() < whipFxUntil) {
+      whipSub.textContent = '加速中';
+      whipSub.style.display = 'block';
+    } else {
+      whipSub.textContent = '効果減';
+      whipSub.style.display = (h.whipEff < 0.8 && !whipUnavailable) ? 'block' : 'none';
+    }
 
-    // Q4: 残距離マイルストーン
     if (!playerFinished && racePhase === 'running') {
-      const remain = Math.max(0, state.cond.distance - h.progress);
-      if (remain < 430 && !_milestonesCrossed.has('final')) {
-        _milestonesCrossed.add('final');
-        _milestonesCrossed.add(400);
-        showMilestoneToast('最後の直線！', '#ffd700', 1000);
-      } else {
-        for (const threshold of [800, 600, 200]) {
-          if (remain < threshold && !_milestonesCrossed.has(threshold)) {
-            _milestonesCrossed.add(threshold);
-            showMilestoneToast(`残り${threshold}m`, '#fff', 800);
-            break;
-          }
+      for (const threshold of [800, 600, 400, 200]) {
+        if (remaining < threshold && !_milestonesCrossed.has(threshold)) {
+          _milestonesCrossed.add(threshold);
+          showMilestoneToast(`残り${threshold}m`);
+          break;
         }
       }
     }
   }
 
   // ==== SECTION: INPUT ====
-
-  // ── Lane change feasibility check (used by toast) ──
-  function canChangeLane(dir) {
-    if (!raceState) return false;
-    const h = raceState.horses[raceState.playerIndex];
-    const target = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, h.targetLane + dir));
-    if (target === h.targetLane) return false; // at edge, can't move
-    return !raceState.horses.some((o, j) => j !== raceState.playerIndex && !o.finished &&
-      Math.abs(o.progress - h.progress) < CONFIG.LANE_CHANGE_BLOCK && Math.abs(o.laneF - target) < 0.8);
-  }
-
-  // ── Lane toast ──
-  let laneToastTimer = null;
-
-  function showLaneToast(dir) {
-    if (racePhase !== 'running' || !raceState) return;
-    const toastEl = document.getElementById('laneToast');
-    if (!toastEl) return;
-    clearTimeout(laneToastTimer);
-    if (canChangeLane(dir)) {
-      // dir -1 = inner (内), dir +1 = outer (外)
-      toastEl.textContent = dir < 0 ? '内へ' : '外へ';
-      toastEl.style.color = '#fff';
-    } else {
-      toastEl.textContent = '進路なし！';
-      toastEl.style.color = '#ff6666';
-    }
-    toastEl.style.display = 'block';
-    laneToastTimer = setTimeout(() => {
-      toastEl.style.display = 'none';
-    }, 500);
-  }
-
   const currentInput = { accel: false, hold: false, laneDir: 0, whip: false };
 
   let swipeStartX = null;
@@ -2952,25 +2499,24 @@
 
     canvas.addEventListener('touchend', e => {
       e.preventDefault();
-      // 進路変更はワンショットパルス：ここで立て、ゲームループが1ステップ消費後に
-      // クリアする（時間ベースのクリアは複数ステップ消費＝複数レーン移動になるため禁止）。
-      // レース中以外はパルスを立てない（ゲート前のスワイプが発走直後に効く事故を防ぐ）
       for (const t of e.changedTouches) {
         const dx = t.clientX - (swipeStartX ?? t.clientX);
-        if (racePhase !== 'running') break;
         if (Math.abs(dx) > 40) {
-          // Swipe: lane change（鏡映座標系により スワイプ右＝外へ＝画面右）
-          const dir = dx > 0 ? 1 : -1;
+          // Swipe: 画面基準。右スワイプ=画面右へ1レーン、左スワイプ=画面左へ1レーン。
+          // この座標系では laneDir の符号が画面左右と逆になるため反転する。
+          const dir = dx > 0 ? -1 : 1;
           currentInput.laneDir = dir;
           showLaneToast(dir);
         } else {
           // Tap: left/right edge = lane change
           if (t.clientX < innerWidth * 0.2) {
-            currentInput.laneDir = -1;
-            showLaneToast(-1);
-          } else if (t.clientX > innerWidth * 0.8) {
+            // 左端タップ=画面左へ1レーン。
             currentInput.laneDir = 1;
             showLaneToast(1);
+          } else if (t.clientX > innerWidth * 0.8) {
+            // 右端タップ=画面右へ1レーン。
+            currentInput.laneDir = -1;
+            showLaneToast(-1);
           }
         }
       }
@@ -2996,10 +2542,8 @@
       btnWhip.addEventListener(ev, e => {
         e.preventDefault();
         currentInput.whip = true;
-        vibe(15);
-        playWhip(); // Q5: 鞭クラック（simが弾いてもタップで鳴る）
         btnWhip.classList.add('pressed');
-        setTimeout(() => btnWhip.classList.remove('pressed'), 120);
+        setTimeout(() => btnWhip.classList.remove('pressed'), 160);
       });
     });
 
@@ -3008,9 +2552,9 @@
       if (e.repeat) return;
       if (e.key === 'ArrowUp' || e.key === ' ') currentInput.accel = true;
       else if (e.key === 'ArrowDown') currentInput.hold = true;
-      else if (e.key === 'ArrowLeft' && racePhase === 'running') { currentInput.laneDir = -1; showLaneToast(-1); }
-      else if (e.key === 'ArrowRight' && racePhase === 'running') { currentInput.laneDir = 1; showLaneToast(1); }
-      else if (e.key === 'w' || e.key === 'W') { currentInput.whip = true; vibe(15); playWhip(); } // 鞭（ワンショット・ループでクリア）
+      else if (e.key === 'ArrowLeft') { currentInput.laneDir = 1; showLaneToast(1); }
+      else if (e.key === 'ArrowRight') { currentInput.laneDir = -1; showLaneToast(-1); }
+      else if (e.key === 'w' || e.key === 'W') currentInput.whip = true; // 鞭（ワンショット・ループでクリア）
     });
     window.addEventListener('keyup', e => {
       if (e.key === 'ArrowUp' || e.key === ' ') currentInput.accel = false;
@@ -3019,284 +2563,6 @@
   }
   setupInput();
 
-  // ==== SECTION: AUDIO ====
-  // Q5: プロシージャル Web Audio サウンド。外部音源ファイルは使わず、
-  // すべてオシレータ／ノイズバッファで合成する。THREE/DOM 非依存ではない
-  // （UI トグルやゲームループと連携するため SIM-CORE の外に置く）。
-  // すべてのワンショットは「audioCtx && soundOn」を確認し try/catch で囲み、
-  // 失敗してもゲーム本体を止めない。自動再生がブロックされて初期化が
-  // 走らなくても、ゲームは無音で正常動作する。
-
-  let audioCtx = null;
-  let masterGain = null;
-  let crowdGain = null;        // 歓声ループ専用ゲイン（1度だけ生成）
-  let crowdSrc = null;
-  let _noiseBuffer = null;     // 共有 1s ホワイトノイズ（遅延生成）
-  let soundOn = (localStorage.getItem('johba_sound') !== 'off'); // 既定 ON
-  let _hoofBeatIdx = -1;       // 直近に鳴らした蹄音ビート番号（増分検知用）
-  let _timeSincePlayerFinish = 0; // 歓声フェードアウト用タイマー
-
-  // 共有ノイズバッファ（最初に必要になったとき生成）
-  function getNoiseBuffer() {
-    if (_noiseBuffer) return _noiseBuffer;
-    const len = audioCtx.sampleRate; // 1 秒
-    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-    _noiseBuffer = buf;
-    return buf;
-  }
-
-  // ゲインエンベロープ補助：t0 から attack 秒で peak まで上げ、decay 秒で 0 近傍へ。
-  function env(gainNode, t0, attack, peak, decay) {
-    const g = gainNode.gain;
-    g.setValueAtTime(0.0001, t0);
-    g.linearRampToValueAtTime(peak, t0 + attack);
-    g.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
-  }
-
-  function initAudio() {
-    if (audioCtx) {
-      // 既存コンテキストが suspended（iOS など）なら再開を試みる
-      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-      return;
-    }
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      audioCtx = new AC();
-      masterGain = audioCtx.createGain();
-      masterGain.gain.value = soundOn ? CONFIG.SND_MASTER : 0;
-      masterGain.connect(audioCtx.destination);
-
-      // 歓声ループ（ノイズ→バンドパス→専用ゲイン）を1度だけ構築。gain は 0 から。
-      crowdGain = audioCtx.createGain();
-      crowdGain.gain.value = 0;
-      crowdGain.connect(masterGain);
-      const band = audioCtx.createBiquadFilter();
-      band.type = 'bandpass';
-      band.frequency.value = 800;
-      band.Q.value = 0.6;
-      band.connect(crowdGain);
-      crowdSrc = audioCtx.createBufferSource();
-      crowdSrc.buffer = getNoiseBuffer();
-      crowdSrc.loop = true;
-      crowdSrc.connect(band);
-      crowdSrc.start();
-
-      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-    } catch (_) { audioCtx = null; }
-  }
-
-  function setSound(on) {
-    soundOn = on;
-    try { localStorage.setItem('johba_sound', on ? 'on' : 'off'); } catch (_) {}
-    if (masterGain && audioCtx) {
-      try {
-        const t = audioCtx.currentTime;
-        masterGain.gain.cancelScheduledValues(t);
-        masterGain.gain.setValueAtTime(masterGain.gain.value, t);
-        masterGain.gain.linearRampToValueAtTime(on ? CONFIG.SND_MASTER : 0, t + 0.1);
-      } catch (_) {}
-    }
-    updateSoundButtons();
-  }
-
-  function updateSoundButtons() {
-    const label = soundOn ? '音ON' : '音OFF';
-    const b1 = document.getElementById('btnSound');
-    const b2 = document.getElementById('btnSoundRace');
-    if (b1) b1.textContent = label;
-    if (b2) b2.textContent = label;
-  }
-
-  // ── 個別サウンド（すべてワンショット：ノードを作って start/stop → GC 任せ） ──
-
-  // 蹄音1打：ノイズ→ローパス、短いエンベロープ。speed は m/s。
-  function playHoof(speed) {
-    if (!audioCtx || !soundOn) return;
-    try {
-      const t = audioCtx.currentTime;
-      const src = audioCtx.createBufferSource();
-      src.buffer = getNoiseBuffer();
-      const lp = audioCtx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 350 + speed * 12;
-      const g = audioCtx.createGain();
-      const peak = CONFIG.SND_HOOF * (0.4 + 0.6 * Math.min(1, speed / 19));
-      env(g, t, 0.004, peak, 0.056);
-      src.connect(lp); lp.connect(g); g.connect(masterGain);
-      src.start(t); src.stop(t + 0.08);
-    } catch (_) {}
-  }
-
-  // ゲート開放クラング：矩形波 220→90Hz + 高域ノイズバースト。
-  function playGate() {
-    if (!audioCtx || !soundOn) return;
-    try {
-      const t = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(220, t);
-      osc.frequency.exponentialRampToValueAtTime(90, t + 0.12);
-      const og = audioCtx.createGain();
-      env(og, t, 0.004, CONFIG.SND_GATE, 0.12);
-      osc.connect(og); og.connect(masterGain);
-      osc.start(t); osc.stop(t + 0.16);
-
-      const src = audioCtx.createBufferSource();
-      src.buffer = getNoiseBuffer();
-      const hp = audioCtx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 2000;
-      const ng = audioCtx.createGain();
-      env(ng, t, 0.004, CONFIG.SND_GATE * 0.8, 0.15);
-      src.connect(hp); hp.connect(ng); ng.connect(masterGain);
-      src.start(t); src.stop(t + 0.18);
-    } catch (_) {}
-  }
-
-  // 鞭のクラック：高域ノイズの鋭いバースト + 短いピッチ落ちオシレータ。
-  function playWhip() {
-    if (!audioCtx || !soundOn) return;
-    try {
-      const t = audioCtx.currentTime;
-      const src = audioCtx.createBufferSource();
-      src.buffer = getNoiseBuffer();
-      const hp = audioCtx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 2500;
-      const ng = audioCtx.createGain();
-      env(ng, t, 0.002, CONFIG.SND_WHIP, 0.05);
-      src.connect(hp); hp.connect(ng); ng.connect(masterGain);
-      src.start(t); src.stop(t + 0.08);
-
-      const osc = audioCtx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(900, t);
-      osc.frequency.exponentialRampToValueAtTime(500, t + 0.06);
-      const og = audioCtx.createGain();
-      env(og, t, 0.002, CONFIG.SND_WHIP * 0.5, 0.06);
-      osc.connect(og); og.connect(masterGain);
-      osc.start(t); osc.stop(t + 0.09);
-    } catch (_) {}
-  }
-
-  // 掛かり警告：三角波 880Hz→988Hz の短い2連ビープ。
-  function playKakariAlert() {
-    if (!audioCtx || !soundOn) return;
-    try {
-      const t = audioCtx.currentTime;
-      [[880, 0], [988, 0.1]].forEach(([freq, off]) => {
-        const t0 = t + off;
-        const osc = audioCtx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.value = freq;
-        const g = audioCtx.createGain();
-        env(g, t0, 0.006, CONFIG.SND_ALERT, 0.084);
-        osc.connect(g); g.connect(masterGain);
-        osc.start(t0); osc.stop(t0 + 0.12);
-      });
-    } catch (_) {}
-  }
-
-  // マイルストーンのティック：サイン 1320Hz。最後の直線（dur===1000）は 1320→1760 の2連。
-  function playTick(isFinal) {
-    if (!audioCtx || !soundOn) return;
-    try {
-      const t = audioCtx.currentTime;
-      const notes = isFinal ? [[1320, 0], [1760, 0.09]] : [[1320, 0]];
-      notes.forEach(([freq, off]) => {
-        const t0 = t + off;
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        const g = audioCtx.createGain();
-        env(g, t0, 0.004, CONFIG.SND_TICK, 0.066);
-        osc.connect(g); g.connect(masterGain);
-        osc.start(t0); osc.stop(t0 + 0.09);
-      });
-    } catch (_) {}
-  }
-
-  // ゴール音：1着＝上昇トライアド、2–3着＝2音、その他＝単音。
-  function playGoal(rank) {
-    if (!audioCtx || !soundOn) return;
-    try {
-      const t = audioCtx.currentTime;
-      let notes;
-      if (rank === 1)            notes = [523, 659, 784];
-      else if (rank === 2 || rank === 3) notes = [523, 659];
-      else                       notes = [392];
-      const single = notes.length === 1;
-      notes.forEach((freq, i) => {
-        const t0 = t + i * 0.09;
-        const dur = single ? 0.2 : 0.12;
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        const g = audioCtx.createGain();
-        env(g, t0, 0.006, CONFIG.SND_GOAL, dur);
-        osc.connect(g); g.connect(masterGain);
-        osc.start(t0); osc.stop(t0 + dur + 0.05);
-      });
-    } catch (_) {}
-  }
-
-  // 毎フレーム：プレイヤー馬の蹄音発火 + 歓声スウェルの追従。
-  // raceState が null でも安全（呼び出し側は running 中のみ呼ぶが念のためガード）。
-  function updateAudio(state, dt) {
-    if (!audioCtx || !soundOn || !state) return;
-    try {
-      const h = state.horses[state.playerIndex];
-
-      // 完走後経過時間（歓声フェードアウト用）
-      if (playerFinished) _timeSincePlayerFinish += dt;
-
-      // ── 蹄音：legPhase の 1 ストライドを 4 ビートに分割し、ビート番号が
-      // 増えたら 1 打鳴らす（最大 ~9打/秒）。停止・低速・非表示時はスキップ。
-      if (!document.hidden && !h.finished && h.speed >= 2) {
-        const beat = Math.floor(h.legPhase / (Math.PI * 2) * 4);
-        if (beat !== _hoofBeatIdx) {
-          // 一気に複数ビート跨いでも1打だけ（タブ復帰直後の連打防止）
-          _hoofBeatIdx = beat;
-          playHoof(h.speed);
-        }
-      }
-
-      // ── 歓声スウェル：残り距離が近いほど大きく。target を毎フレーム平滑追従。
-      if (crowdGain) {
-        const remaining = state.cond.distance - h.progress;
-        let target;
-        if (playerFinished) {
-          target = 0.18 * Math.max(0, 1 - _timeSincePlayerFinish / 2);
-        } else if (remaining < 400) {
-          target = CONFIG.SND_CROWD * (1 - (remaining / 400) * 0.7);
-        } else if (racePhase === 'running') {
-          target = 0.035;
-        } else {
-          target = 0;
-        }
-        crowdGain.gain.value += (target - crowdGain.gain.value) * 0.05;
-      }
-    } catch (_) {}
-  }
-
-  // ページ可視性：非表示で suspend、復帰で（音 ON なら）resume。iOS/省電力対策。
-  document.addEventListener('visibilitychange', () => {
-    if (!audioCtx) return;
-    try {
-      if (document.hidden) audioCtx.suspend();
-      else if (soundOn) audioCtx.resume();
-    } catch (_) {}
-  });
-
-  // 起動時にトグルのラベルを現在状態へ合わせる
-  updateSoundButtons();
-  const _btnSoundTitle = document.getElementById('btnSound');
-  if (_btnSoundTitle) _btnSoundTitle.addEventListener('click', () => setSound(!soundOn));
-  const _btnSoundRace = document.getElementById('btnSoundRace');
-  if (_btnSoundRace) _btnSoundRace.addEventListener('click', () => setSound(!soundOn));
 
   // ==== SECTION: UI-SCREENS ====
 
@@ -3337,10 +2603,9 @@
     return ['✕', '△', '○', '◎'][v] ?? '?';
   }
 
-  // ── condFitScore: 今回の距離・馬場との相性スコアを計算 ──
   function condFitScore(def, cond) {
-    const distIdx = [1200,1600,2000,2400].indexOf(cond.distance);
-    const goingIdx = {'良':0,'稍重':1,'重':2,'不良':3}[cond.going] ?? 0;
+    const distIdx = [1200, 1600, 2000, 2400].indexOf(cond.distance);
+    const goingIdx = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[cond.going] ?? 0;
     let s = 0;
     const dGap = Math.abs(def.distFit - distIdx);
     s += dGap === 0 ? 2 : dGap === 1 ? 0 : dGap === 2 ? -2 : -3;
@@ -3352,19 +2617,15 @@
     if (cond.distance <= 1600 && def.burst >= 75) s += 1;
     return s;
   }
-
-  // condFit mark and color from score
   function condFitMark(s) {
     if (s >= 3) return { mark: '◎', color: '#44ffaa' };
     if (s >= 1) return { mark: '○', color: '#aaddff' };
     if (s >= -1) return { mark: '△', color: '#ccaa66' };
     return { mark: '✕', color: '#ff8888' };
   }
-
-  // condFit short comment
   function condFitComment(def, cond) {
-    const distIdx = [1200,1600,2000,2400].indexOf(cond.distance);
-    const goingIdx = {'良':0,'稍重':1,'重':2,'不良':3}[cond.going] ?? 0;
+    const distIdx = [1200, 1600, 2000, 2400].indexOf(cond.distance);
+    const goingIdx = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[cond.going] ?? 0;
     const dGap = Math.abs(def.distFit - distIdx);
     if (dGap === 0 && goingIdx >= 1 && def.goingFit >= goingIdx) return '距離も馬場もぴったり';
     if (dGap === 0) return 'この距離は合う';
@@ -3377,12 +2638,8 @@
     if (def.burst >= 75) return '瞬発力勝負向き';
     return '条件は可もなく不可もなく';
   }
-
-  // Q4: 予想人気
   function computePopularity(field, cond) {
-    const ratings = field.map(def =>
-      (def.speed + def.stamina + def.burst + def.power) / 4 + condFitScore(def, cond) * 3
-    );
+    const ratings = field.map(def => (def.speed + def.stamina + def.burst + def.power) / 4 + condFitScore(def, cond) * 3);
     return field.map((def, i) => {
       let rank = 1;
       for (let j = 0; j < field.length; j++) {
@@ -3392,7 +2649,6 @@
       return rank;
     });
   }
-
   function popularityColor(pop) {
     if (pop === 1) return '#ffd700';
     if (pop === 2) return '#c0c0c0';
@@ -3400,9 +2656,10 @@
     return '#8899aa';
   }
 
+
   // Show/hide screens
   function showScreen(id) {
-    const ids = ['screenTitle', 'screenCond', 'screenEntries', 'screenLottery', 'screenGate', 'screenResult', 'screenCeremony'];
+    const ids = ['screenTitle', 'screenTutorial', 'screenCond', 'screenEntries', 'screenLottery', 'screenGate', 'screenResult', 'screenCeremony'];
     ids.forEach(sid => {
       const el = document.getElementById(sid);
       el.style.display = (sid === id) ? 'flex' : 'none';
@@ -3415,6 +2672,10 @@
   let pickedIndices = []; // indices into field for the 3 wished horses
   let playerIdx = 0;
 
+  const SHARE_URL = 'https://chameleonjp.codeberg.page/johba/';
+  let lastRaceSetup = null;
+  let lastStartLabel = '';
+
   // ── Title screen + name input ──
   // Load persisted name on startup
   (function loadPlayerName() {
@@ -3425,23 +2686,23 @@
   document.getElementById('playerName').addEventListener('input', () => {
     const inp = document.getElementById('playerName');
     localStorage.setItem('johba_player_name', inp.value);
-    // Clear name validation error when user starts typing
-    const warn = document.getElementById('nameWarn');
-    warn.style.display = 'none';
+    document.getElementById('nameWarn').style.display = 'none';
     inp.classList.remove('name-error');
   });
 
   document.getElementById('btnStart').addEventListener('click', () => {
-    if (!audioCtx) initAudio(); // Q5: 最初のユーザー操作で AudioContext を作成（自動再生制限対策）
     const inp = document.getElementById('playerName');
     const name = inp.value.trim();
     if (!name) {
-      const warn = document.getElementById('nameWarn');
-      warn.style.display = 'block';
+      document.getElementById('nameWarn').style.display = 'block';
       inp.classList.add('name-error');
       inp.focus();
       return;
     }
+    showScreen('screenTutorial');
+  });
+
+  document.getElementById('btnTutorialNext').addEventListener('click', () => {
     goToCondScreen();
   });
 
@@ -3453,12 +2714,18 @@
   });
 
   document.getElementById('btnShare').addEventListener('click', async () => {
-    const shareData = { title: 'ジョーバ', url: location.href };
+    const text = [
+      'ジョーバ',
+      '騎手視点で12頭立ての芝レースに挑む3D競馬ゲーム。',
+      'ゲートの一瞬、進路取り、仕掛け、ムチで勝ち切れ。',
+      SHARE_URL
+    ].join('\n');
+    const shareData = { title: 'ジョーバ', text };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(location.href);
+        await navigator.clipboard.writeText(text);
         const btn = document.getElementById('btnShare');
         const orig = btn.textContent;
         btn.textContent = 'コピーしました';
@@ -3502,7 +2769,7 @@
     pending.popularity = popularity;
 
     document.getElementById('entriesCondLine').textContent =
-      `${cond.distance}m ${cond.going} / 天気：${cond.weather}  ※相性＝今回の距離・馬場`;
+      `${cond.distance}m ${cond.going} / 天気：${cond.weather}`;
     document.getElementById('entriesPickStatus').textContent =
       '希望馬を3頭選んでください';
     document.getElementById('btnApply').textContent = '希望を申請する（0/3）';
@@ -3517,10 +2784,10 @@
 
       const frameColor = hexColor(CONFIG.FRAME_COLORS[h.frame - 1]);
       const textColor = frameTextColor(h.frame - 1);
+
       const score = condFitScore(h, cond);
       const { mark, color } = condFitMark(score);
       const comment = condFitComment(h, cond);
-
       row.innerHTML = `
         <div class="frame-chip" style="background:${frameColor};color:${textColor};">${h.frame}</div>
         <div class="entry-num">${h.num}</div>
@@ -3528,7 +2795,7 @@
           <div class="entry-name">${h.name}</div>
           <div class="entry-meta">${styleLabel(h.style)} / 距離:${distFitLabel(h.distFit)}</div>
           <div class="entry-stats">スピ${statGrade(h.speed)} スタ${statGrade(h.stamina)} 瞬発${statGrade(h.burst)} パワ${statGrade(h.power)}</div>
-          <div style="font-size:10px;margin-top:2px;"><span style="color:${popularityColor(popularity[idx])};font-weight:700;">${popularity[idx]}番人気</span>　<span style="color:${color};font-weight:700;">相性${mark}</span> <span style="color:#999;">${comment}</span></div>
+          <div style="font-size:10px;margin-top:2px;"><span style="color:${popularityColor(popularity[idx])};font-weight:700;">${popularity[idx]}番人気</span>　<span style="color:${color};font-weight:700;">条件相性${mark}</span> <span style="color:#999;">${comment}</span></div>
         </div>
         <div class="going-fit-mark">${goingFitMark(h.goingFit)}</div>
         <div class="entry-check" id="check_${idx}">✓</div>
@@ -3593,24 +2860,6 @@
     const fc = hexColor(CONFIG.FRAME_COLORS[h.frame - 1]);
     const tc = frameTextColor(h.frame - 1);
 
-    // condFit row — only when pending.cond is set (entries screen context)
-    let condFitHtml = '';
-    if (pending.cond) {
-      const score = condFitScore(h, pending.cond);
-      const { mark, color } = condFitMark(score);
-      const comment = condFitComment(h, pending.cond);
-      condFitHtml = `<div class="stat-line"><span class="stat-label">条件相性</span><span class="stat-val"><span style="color:${color};font-weight:700;">${mark}</span> <span style="font-size:11px;color:#999;">${comment}</span></span></div>`;
-      // Q4: 予想人気
-      const pop = pending.popularity;
-      if (pop) {
-        const fieldIdx = pending.field.indexOf(h);
-        if (fieldIdx >= 0) {
-          const popNum = pop[fieldIdx];
-          condFitHtml += `<div class="stat-line"><span class="stat-label">予想人気</span><span class="stat-val" style="color:${popularityColor(popNum)};font-weight:700;">${popNum}番人気</span></div>`;
-        }
-      }
-    }
-
     let html = `
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
         <div class="frame-chip" style="background:${fc};color:${tc};">${h.frame}</div>
@@ -3621,8 +2870,21 @@
       <div class="stat-line"><span class="stat-label">瞬発力</span><span class="stat-val">${h.burst}（${statGrade(h.burst)}）</span></div>
       <div class="stat-line"><span class="stat-label">パワー</span><span class="stat-val">${h.power}（${statGrade(h.power)}）</span></div>
       <div class="stat-line"><span class="stat-label">馬場適性</span><span class="stat-val">${goingFitMark(h.goingFit)}</span></div>
-      ${condFitHtml}
     `;
+
+    if (pending.cond) {
+      const score = condFitScore(h, pending.cond);
+      const fit = condFitMark(score);
+      const comment = condFitComment(h, pending.cond);
+      html += `<div class="stat-line"><span class="stat-label">条件相性</span><span class="stat-val"><span style="color:${fit.color};font-weight:700;">${fit.mark}</span> <span style="font-size:11px;color:#999;">${comment}</span></span></div>`;
+      if (pending.popularity) {
+        const fieldIdx = pending.field.indexOf(h);
+        if (fieldIdx >= 0) {
+          const popNum = pending.popularity[fieldIdx];
+          html += `<div class="stat-line"><span class="stat-label">予想人気</span><span class="stat-val" style="color:${popularityColor(popNum)};font-weight:700;">${popNum}番人気</span></div>`;
+        }
+      }
+    }
 
     if (showSecret) {
       const tempLabel = h.temperament >= 70 ? 'おとなしい' : h.temperament >= 45 ? 'ふつう' : '気性難';
@@ -3700,20 +2962,11 @@
     const condLabel = winner.condition >= 90 ? '絶好調' : winner.condition >= 70 ? '好調' : winner.condition >= 45 ? '普通' : winner.condition >= 25 ? '不調' : '絶不調';
     const gateLabel = winner.gate >= 70 ? '上手' : winner.gate >= 40 ? 'ふつう' : '下手';
     const hintMap = {
-      nige:   'ハナを取って粘り込もう',
-      senko:  '好位で脚を溜めて直線で抜け出そう',
-      sashi:  '中団で我慢して残り700mから仕掛けよう',
-      oikomi: '最後方で溜めて直線一気！',
+      nige:   '「ハナを取って粘り込もう」',
+      senko:  '「好位で脚を溜めて直線で抜け出そう」',
+      sashi:  '「中団で我慢して残り700mから仕掛けよう」',
+      oikomi: '「最後方で溜めて直線一気！」',
     };
-
-    // Build strategy advice lines (pick up to 2)
-    const advices = [];
-    if (winner.gate < 40)        advices.push('スタート集中。出遅れると厳しい');
-    if (winner.temperament < 45) advices.push('序盤は▼で抑えて掛かりを防げ');
-    if (winner.stamina < 50)     advices.push('早仕掛け厳禁。終盤まで我慢');
-    if (winner.burst >= 75)      advices.push('直線まで脚を残せば鋭く伸びる');
-    if (winner.stamina >= 80)    advices.push('スタミナ自慢。早めに動いても保つ');
-    const adviceLines = advices.slice(0, 2);
 
     document.getElementById('revealHorseName').textContent =
       `${winner.num}番 ${winner.name}`;
@@ -3737,12 +2990,16 @@
       <div class="spec-row"><span class="spec-key">ゲート</span><span class="spec-val">${gateLabel}</span></div>
     `;
 
-    // Build strategy memo: first line = style hint, then up to 2 individual advices
+    const advices = [];
+    if (winner.gate < 40) advices.push('スタート集中。出遅れると厳しい');
+    if (winner.temperament < 45) advices.push('序盤は▼で抑えて掛かりを防げ');
+    if (winner.stamina < 50) advices.push('早仕掛け厳禁。終盤まで我慢');
+    if (winner.burst >= 75) advices.push('直線まで脚を残せば鋭く伸びる');
+    if (winner.stamina >= 80) advices.push('スタミナ自慢。早めに動いても保つ');
     let memoHtml = `<div style="font-weight:700;margin-bottom:4px;">作戦メモ</div>`;
     memoHtml += `<div>・${hintMap[winner.style] ?? ''}</div>`;
-    adviceLines.forEach(a => { memoHtml += `<div>・${a}</div>`; });
+    advices.slice(0, 2).forEach(a => { memoHtml += `<div>・${a}</div>`; });
     document.getElementById('lotteryHint').innerHTML = memoHtml;
-    document.getElementById('lotteryHint').style.fontSize = '12px';
 
     document.getElementById('lotteryReveal').style.display = 'flex';
     document.getElementById('lotteryReveal').style.flexDirection = 'column';
@@ -3757,23 +3014,20 @@
   let gateSignalTime = null;       // performance.now() when signal fires
   let gateTapHandled = false;
   let gateSignalFired = false;
-  let gateEarlyTap = false;        // 早押し（フライング）判定。合図は予定どおり出す
+  let gateEarlyTap = false;
   let gateSignalTimeout = null;
   let gateFeedbackTimeout = null;
   let gateProceedTimeout = null;
-  let lastStartLabel = '';         // 結果画面の騎乗メモ用（好スタート/まずまず/出遅れ/フライング）
-  let lastRaceSetup = null;        // 同じ条件でもう一度：スナップショット { cond, field, playerIdx }
 
   function openGateScreen() {
     hasSubmitted = false; // reset per-race submission guard
-    // スナップショット：同じ条件でもう一度ボタン用（resetAllより前に保存すること）
-    lastRaceSetup = { cond: pending.cond, field: pending.field, playerIdx };
     const { cond, field } = pending;
+    lastRaceSetup = { cond, field, playerIdx };
 
     // Apply weather/going visuals for this race
     applyWeather(cond);
 
-    // Build/reset horse meshes (dispose geometries/materials to avoid memory leaks)
+    // Build/reset horse meshes
     horseMeshes.forEach(m => { disposeObject3D(m); scene.remove(m); });
     horseMeshes = [];
     field.forEach(def => {
@@ -3786,40 +3040,18 @@
     shownResults = false;
     playerFinished = false;
     accumulator = 0;
-    slowMoT = 0;
-    slowMoUsed = false;
-    clearGoalFx();
     racePhase = 'gate';
-
-    // Task 3: ゲート再配置（距離ごとにstartSが変わる）+ 表示リセット
-    positionGate(raceState.startS);   // reposition stalls to this race's start line
-    gateSetVisible(true);              // restore visibility of all gate parts
-    gateDoorT = 0;                     // reset door animation counter
-
-    // Set up mini map dot colors and reset positions
+    gateDoorT = 0;
+    gateHideTimer = 0;
+    positionGate(raceState.startS);
+    gateSetVisible(true);
     setupMiniMapDots(field, playerIdx);
-    // Reset bar width measurement (in case layout shifted)
-    const mmBar = document.getElementById('miniMap');
-    if (mmBar) miniMapBarW = mmBar.offsetWidth || miniMapBarW;
+    lastPlayerWhipCount = 0;
+    whipFxUntil = 0;
 
     // Place meshes at gate position
     updateHorseMeshes(raceState, 0);
     updateCamera(raceState);
-
-    // Q4: reset band/vibe/milestone/hint caches
-    _lastStaminaBand = -1;
-    _wasKakari = false;
-    // Q5: per-race audio state reset (蹄音ビート・完走タイマー)
-    _hoofBeatIdx = -1;
-    _timeSincePlayerFinish = 0;
-    _milestonesCrossed = new Set();
-    clearTimeout(_milestoneTimer);
-    _milestoneTimer = null;
-    if (_milestoneEl) _milestoneEl.style.display = 'none';
-    clearTimeout(_firstHintTimer);
-    _firstHintTimer = null;
-    const hintElGate = document.getElementById('firstHint');
-    if (hintElGate) hintElGate.style.display = 'none';
 
     // Reset gate UI
     gateSignalTime = null;
@@ -3827,6 +3059,17 @@
     gateSignalFired = false;
     gateEarlyTap = false;
     lastStartLabel = '';
+    _milestonesCrossed = new Set();
+    clearTimeout(_milestoneTimer);
+    _milestoneTimer = null;
+    const milestoneEl = document.getElementById('milestoneToast');
+    if (milestoneEl) milestoneEl.style.display = 'none';
+    clearTimeout(laneToastTimer);
+    const laneEl = document.getElementById('laneToast');
+    if (laneEl) laneEl.style.display = 'none';
+    clearGoalFx();
+    slowMoT = 0;
+    slowMoUsed = false;
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
     clearTimeout(gateProceedTimeout);
@@ -3837,17 +3080,18 @@
     document.getElementById('gateSignal').style.color = '#ffe066';
     document.getElementById('gateFeedback').textContent = '';
     document.getElementById('gateTapHint').style.display = 'none';
+    document.getElementById('gateTapArea').style.display = 'none';
 
     showScreen('screenGate');
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
-    document.getElementById('btnSoundRace').style.display = 'none'; // Q5: HUDと連動
 
     // After 0.8s → show tap hint
     gateSignalTimeout = setTimeout(() => {
       document.getElementById('gateStatus').textContent = '';
       document.getElementById('gateTapHint').style.display = 'block';
-      document.getElementById('gateTapHint').textContent = 'タイミングよくタップ！';
+      document.getElementById('gateTapHint').textContent = 'ゲートが開くと同時にタップ';
+      document.getElementById('gateTapArea').style.display = 'flex';
 
       // After random 1.4–2.5s more → fire signal
       const signalDelay = 1400 + Math.random() * 1100;
@@ -3858,15 +3102,11 @@
   }
 
   function fireGateSignal() {
-    // 合図は早押しの有無に関わらず必ず予定どおり出す。
-    // レース開始（started=true）はこの関数だけが行う＝早押しでも状態が破綻しない
     gateSignalFired = true;
     gateSignalTime = performance.now();
-    playGate(); // Q5: ゲート開放クラング
-
     raceState.started = true;
-    // 早押し済みならフライングのペナルティ確定。未タップなら出遅れ既定値（タップで上書き）
-    raceState.playerStartDelay = gateEarlyTap ? 0.5 : 1.2;
+    raceState.playerStartDelay = 1.2;
+    gateDoorT = 0;
 
     document.getElementById('gateStatus').style.display = 'none';
     document.getElementById('gateTapHint').style.display = 'none';
@@ -3877,15 +3117,14 @@
     signalEl.style.display = 'block';
 
     if (gateEarlyTap) {
-      // 判定は保存済み：以降のタップは受け付けず、そのままレースへ
       gateTapHandled = true;
-      lastStartLabel = 'フライング';
-      showGateFeedback('フライングのぶん出遅れ...', '#ffaa44');
+      raceState.playerStartDelay = 0.5;
+      lastStartLabel = 'フライング気味';
+      showGateFeedback('早い！出遅れ気味', '#ffaa44');
       proceedToRace();
       return;
     }
 
-    // Auto-proceed after 1.2s if no tap
     gateSignalTimeout = setTimeout(() => {
       if (!gateTapHandled) {
         gateTapHandled = true;
@@ -3898,29 +3137,28 @@
   }
 
   function handleGateTap() {
-    if (!audioCtx) initAudio(); // Q5: ゲートタップでも AudioContext を確保（iOS など）
-    else if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-    if (gateTapHandled) return;
+    if (!raceState || racePhase !== 'gate') return;
 
     if (!gateSignalFired) {
-      // 早押し：判定だけ保存し、合図のタイマーはキャンセルしない（合図は予定どおり出る）
-      if (gateEarlyTap) return; // 連打は無視
+      if (gateEarlyTap) return;
       gateEarlyTap = true;
-      showGateFeedback('フライング気味！', '#ffaa44');
+      gateTapHandled = true;
+      showGateFeedback('まだ！ゲートが開いてから', '#ffaa44');
       return;
     }
 
+    if (gateTapHandled) return;
     gateTapHandled = true;
-    clearTimeout(gateSignalTimeout); // 合図後の自動進行タイマーのみ解除
+    clearTimeout(gateSignalTimeout);
 
     const dt = (performance.now() - gateSignalTime) / 1000;
     let delay, feedback, color;
-    if (dt <= 0.12) {
+    if (dt <= 0.3) {
       delay = 0.05;
       feedback = '好スタート！';
       color = '#44ffaa';
       lastStartLabel = '好スタート';
-    } else if (dt <= 0.3) {
+    } else if (dt <= 0.6) {
       delay = dt;
       feedback = 'まずまずのスタート';
       color = '#ffe066';
@@ -3942,40 +3180,19 @@
     el.textContent = text;
     el.style.color = color;
     clearTimeout(gateFeedbackTimeout);
-    gateFeedbackTimeout = setTimeout(() => {
-      el.textContent = '';
-    }, 1000);
-  }
-
-  // Q4: 初回操作ヒント
-  function showFirstHintIfNeeded() {
-    if (localStorage.getItem('johba_hint_done')) return;
-    const el = document.getElementById('firstHint');
-    if (!el) return;
-    el.style.display = 'block';
-    function dismissHint() {
-      el.style.display = 'none';
-      localStorage.setItem('johba_hint_done', '1');
-      clearTimeout(_firstHintTimer);
-      _firstHintTimer = null;
-      el.removeEventListener('pointerdown', dismissHint);
-    }
-    el.addEventListener('pointerdown', dismissHint);
-    _firstHintTimer = setTimeout(dismissHint, 5000);
+    gateFeedbackTimeout = setTimeout(() => { el.textContent = ''; }, 1000);
   }
 
   function proceedToRace() {
-    // Short delay so feedback is visible, then hide overlay and start race
     clearTimeout(gateProceedTimeout);
     gateProceedTimeout = setTimeout(() => {
-      showScreen(null); // no overlay
+      showScreen(null);
       document.getElementById('hud').style.display = 'block';
       document.getElementById('controls').style.display = 'block';
-      document.getElementById('btnSoundRace').style.display = 'block'; // Q5: HUDと連動
+      measureMiniMapWidth();
       racePhase = 'running';
-      _gateHideTimer = 1.5; // start 1.5s countdown to hide side panels/tops
-      showFirstHintIfNeeded(); // Q4
-    }, 600);
+      gateHideTimer = 1.5;
+    }, 300);
   }
 
   // Gate screen tap handling
@@ -4009,7 +3226,7 @@
   }
 
   // 掲示板オーバーレイのタップリスナーは常に1つだけ保持する
-  // （ボタン経由で結果へ進むと解除されず、次レースで旧stateの結果画面が出るバグを防ぐ）
+  // （ボタン経由で結果に進むと解除されず、次レースで旧stateの結果画面が出るバグを防ぐ）
   let ceremonyTapHandler = null;
   function _removeCeremonyTapHandler() {
     if (ceremonyTapHandler) {
@@ -4148,6 +3365,48 @@
     return '展開どおりの堅実な騎乗だった';
   }
 
+
+
+  function generateResultTitle(state, rank) {
+    const ps = state.playerStats;
+    const startDelay = state.playerStartDelay ?? 0.15;
+    if (rank === 1 && startDelay <= 0.08) return '好発進の名騎手';
+    if (rank === 1 && ps.staminaAtFinish !== null && ps.staminaAtFinish < 0.08) return '粘り切り勝利';
+    if (rank === 1 && ps.spurtRemain !== null && ps.spurtRemain < 500) return '豪脚一閃';
+    if (ps.blockedFinalTime > 1.5) return '前壁地獄';
+    if (ps.kakariTime > 3) return '暴れ馬に振り回された';
+    if (ps.staminaAtFinish !== null && ps.staminaAtFinish > 0.35 && rank >= 4) return '脚を余した騎乗';
+    if (rank <= 3) return '馬券圏内の好騎乗';
+    return '堅実な騎乗';
+  }
+
+  function renderRidingMemo(state) {
+    const grid = document.getElementById('ridingMemoGrid');
+    if (!grid) return;
+    const ps = state.playerStats;
+    const fmtSec = v => `${Math.max(0, v).toFixed(1)}秒`;
+    const fmtRemain = v => v === null ? '記録なし' : `残り${Math.max(0, Math.round(v))}m`;
+    const fmtPct = v => v === null ? '不明' : `${Math.round(v * 100)}%`;
+    const cells = [
+      ['スタート', lastStartLabel || '標準'],
+      ['半分通過', ps.rankAtHalf ? `${ps.rankAtHalf}番手` : '未記録'],
+      ['掛かり時間', fmtSec(ps.kakariTime || 0)],
+      ['前が壁', fmtSec(ps.blockedTime || 0)],
+      ['直線の壁', fmtSec(ps.blockedFinalTime || 0)],
+      ['ムチ回数', `${ps.whipCount || 0}回`],
+      ['仕掛け開始', fmtRemain(ps.spurtRemain)],
+      ['残スタミナ', fmtPct(ps.staminaAtFinish)],
+    ];
+    grid.innerHTML = '';
+    cells.forEach(([label, value]) => {
+      const div = document.createElement('div');
+      div.className = 'memo-cell';
+      div.innerHTML = `${label}: <span class="memo-val"></span>`;
+      div.querySelector('.memo-val').textContent = value;
+      grid.appendChild(div);
+    });
+  }
+
   // ==== SECTION: SUPABASE ====
   // ── Supabase RPC helper ──
   async function supabaseRpc(fn, body) {
@@ -4173,44 +3432,50 @@
 
   // ── Ranking render ──
   function renderRanking(rows, playerName) {
-    const box = document.getElementById('rankingBox');
-    box.innerHTML = '';
-    if (!Array.isArray(rows) || rows.length === 0) {
-      box.textContent = 'ランキングを取得できませんでした';
-      return;
-    }
-    rows.forEach(r => {
-      const no    = r.rank_no ?? r.rank ?? '?';
-      const name  = r.display_name ?? r.name ?? '?';
-      const score = r.score ?? '?';
-      if (name === '?' && score === '?') return; // skip unreadable rows
-      const isMe = playerName && name === playerName;
-      const row = document.createElement('div');
-      row.className = 'rank-row' + (isMe ? ' my-row' : '');
-      // display_name は他プレイヤー由来の外部データ。innerHTMLに入れるとXSSになるため
-      // 必ず textContent で組み立てる
-      const mk = (cls, text) => {
-        const s = document.createElement('span');
-        s.className = cls;
-        s.textContent = text;
-        return s;
-      };
-      row.appendChild(mk('rank-no', `${no}位`));
-      row.appendChild(mk('rank-name', String(name)));
-      row.appendChild(mk('rank-score', `${score}点`));
-      box.appendChild(row);
-    });
-    if (box.children.length === 0) {
-      box.textContent = 'ランキングを取得できませんでした';
-    }
+  const box = document.getElementById('rankingBox');
+  box.innerHTML = '';
+  if (!Array.isArray(rows) || rows.length === 0) {
+    box.textContent = 'ランキングを取得できませんでした';
+    return;
   }
+
+  rows.forEach(r => {
+    const no = r.rank_no ?? r.rank ?? '?';
+    const name = r.display_name ?? r.name ?? '?';
+    const score = r.best_score ?? r.score ?? '?';
+
+    if (name === '?' && score === '?') return;
+
+    const isMe = playerName && name === playerName;
+    const row = document.createElement('div');
+    row.className = 'rank-row' + (isMe ? ' my-row' : '');
+
+    const mk = (cls, text) => {
+      const s = document.createElement('span');
+      s.className = cls;
+      s.textContent = text;
+      return s;
+    };
+
+    row.appendChild(mk('rank-no', `${no}位`));
+    row.appendChild(mk('rank-name', String(name)));
+    row.appendChild(mk('rank-score', `${score}点`));
+    box.appendChild(row);
+  });
+
+  if (box.children.length === 0) {
+    box.textContent = 'ランキングを取得できませんでした';
+  }
+}
 
   // ── Module-level submission guard (reset per race in openGateScreen) ──
   let hasSubmitted = false;
+  let resultToken = 0;
 
   // ── submitAndLoadRanking ──
-  async function submitAndLoadRanking(score) {
+  async function submitAndLoadRanking(score, token) {
     if (hasSubmitted) return;
+    if (token !== resultToken) return;
     hasSubmitted = true; // guard set BEFORE any await
 
     const statusEl = document.getElementById('submitStatus');
@@ -4229,6 +3494,7 @@
           p_score:          Math.round(score),
           p_client_version: CONFIG.CLIENT_VERSION,
         });
+        if (token !== resultToken) return;
         statusEl.textContent = 'ランキング送信完了';
       } catch (err) {
         statusEl.textContent = 'ランキング送信失敗（スコアはこの画面でのみ表示）';
@@ -4243,39 +3509,13 @@
         p_game_slug: CONFIG.GAME_SLUG,
         p_limit:     10,
       });
+      if (token !== resultToken) return;
       renderRanking(rows, rawName);
     } catch (err) {
+      if (token !== resultToken) return;
       boxEl.textContent = 'ランキングを取得できませんでした';
       console.warn('[johba] get_best_score_ranking failed:', err);
     }
-  }
-
-  // ── 結果称号 ──
-  function generateResultTitle(state, rank) {
-    const ps = state.playerStats;
-    const playerDef = state.field[state.playerIndex];
-    // 優先順位：先にマッチしたものを返す
-    if (rank === 1 && lastStartLabel === '好スタート')
-      return '好発進の名騎手';
-    if (rank === 1 && ps.staminaAtFinish !== null && ps.staminaAtFinish < 0.08)
-      return '絞り切り勝利';
-    if (rank === 1)
-      return '本日の主役';
-    if (playerDef.style === 'oikomi' && rank <= 3)
-      return '豪脚一閃';
-    if (ps.blockedTime > 4)
-      return '前壁地獄';
-    if (ps.kakariTime > 5)
-      return '暴れ馬に振り回された';
-    if (ps.staminaAtFinish !== null && ps.staminaAtFinish > 0.35 && rank >= 4)
-      return '脚を余した騎乗';
-    if (lastStartLabel === 'フライング')
-      return '気が早い騎手';
-    if (rank <= 3)
-      return '馬券圏内の堅実派';
-    if (rank >= 10)
-      return '次走に期待';
-    return '研鑽の一戦';
   }
 
   // ── Finish/result screen ──
@@ -4293,7 +3533,11 @@
     const baseTime = state.cond.baseTime;
     const timeDiff = baseTime - time; // positive = faster than par
     const timeBonus= Math.min(CONFIG.TIME_BONUS_MAX, Math.max(0, Math.floor(timeDiff * 10) * CONFIG.TIME_BONUS_PER_TENTH));
-    const score = rankPts + timeBonus;
+    // 人気が低い馬ほど加点。1番人気は+0、2番人気は+30、以降1つ人気が下がるごとに+30。
+    const popularityList = computePopularity(state.field, state.cond);
+    const playerPopularity = popularityList[state.playerIndex] ?? 1;
+    const popularityBonus = Math.max(0, (playerPopularity - 1) * 30);
+    const score = rankPts + timeBonus + popularityBonus;
 
     const rankLabels = ['','1着','2着','3着','4着','5着','6着','7着','8着','9着','10着','11着','12着'];
 
@@ -4304,48 +3548,18 @@
     document.getElementById('resultRank' ).textContent = rankLabels[rank] ?? `${rank}着`;
     document.getElementById('resultHorse').textContent = `${h.num}番 ${h.name}`;
     document.getElementById('resultTime' ).textContent = `走破タイム：${time.toFixed(2)}s`;
-    document.getElementById('resultScore').textContent = `スコア：${score}点（着順${rankPts} + タイム${timeBonus}）`;
-
-    // 結果称号
+    document.getElementById('resultScore').textContent = `スコア：${score}点（着順${rankPts} + タイム${timeBonus} + 人気${popularityBonus}）`;
     const title = generateResultTitle(state, rank);
-    document.getElementById('resultTitle').textContent = `称号「${title}」`;
+    document.getElementById('resultTitle').textContent = title;
+    renderRidingMemo(state);
 
     // 講評
     document.getElementById('resultComment').textContent =
       `講評：「${generateComment(state, rank)}」`;
 
-    // 騎乗メモ
-    const ps = state.playerStats;
-    const memoItems = [
-      ['スタート', lastStartLabel || '--'],
-      ['掛かり', ps.kakariTime > 0 ? ps.kakariTime.toFixed(1) + '秒' : 'なし'],
-      ['前が壁', ps.blockedTime > 0.05 ? ps.blockedTime.toFixed(1) + '秒' : 'なし'],
-      ['鞭', ps.whipCount + '回'],
-      ['仕掛け', ps.spurtRemain !== null ? '残り' + Math.round(ps.spurtRemain) + 'm' : 'なし'],
-      ['残スタミナ', ps.staminaAtFinish !== null ? Math.round(ps.staminaAtFinish * 100) + '%' : '--'],
-    ];
-    const gridEl = document.getElementById('ridingMemoGrid');
-    gridEl.innerHTML = '';
-    memoItems.forEach(([label, val]) => {
-      const cell = document.createElement('div');
-      cell.className = 'memo-cell';
-      cell.textContent = label + '：';
-      const valSpan = document.createElement('span');
-      valSpan.className = 'memo-val';
-      valSpan.textContent = val;
-      cell.appendChild(valSpan);
-      gridEl.appendChild(cell);
-    });
-
-    // Full finish order list with time / gap (Q4: Task 7)
+    // Full finish order list
     const listEl = document.getElementById('finishOrderList');
     listEl.innerHTML = '';
-    const winnerTime = state.results.length > 0 ? state.results[0].finishTime : 0;
-    function _fmtTime(sec) {
-      const m = Math.floor(sec / 60);
-      const s = sec - m * 60;
-      return m > 0 ? `${m}:${s.toFixed(2).padStart(5, '0')}` : `${s.toFixed(2)}s`;
-    }
     state.results.forEach(res => {
       const def = state.field[res.index];
       const isPlayer = res.index === state.playerIndex;
@@ -4353,44 +3567,46 @@
       const tc = frameTextColor(def.frame - 1);
       const row = document.createElement('div');
       row.className = 'finish-row' + (isPlayer ? ' player-row' : '');
-      const timePart = res.rank === 1
-        ? `<span style="font-size:10px;color:#aaa;margin-left:auto;">${_fmtTime(res.finishTime)}</span>`
-        : `<span style="font-size:10px;color:#888;margin-left:auto;">+${(res.finishTime - winnerTime).toFixed(2)}</span>`;
       row.innerHTML = `
         <span class="finish-rank">${res.rank}着</span>
         <div class="frame-chip" style="background:${fc};color:${tc};width:24px;height:24px;font-size:11px;">${def.frame}</div>
         <span style="font-size:13px; color:#aaa; width:22px;">${def.num}</span>
         <span class="finish-name">${def.name}${isPlayer ? '（あなた）' : ''}</span>
-        ${timePart}
       `;
       listEl.appendChild(row);
     });
 
     // Store result data for share button
-    document.getElementById('btnShare2').dataset.shareText =
-      `ジョーバ ${state.cond.distance}m ${rankLabels[rank] ?? rank + '着'}！スコア${score}点 称号「${title}」 #ジョーバ`;
+    document.getElementById('btnShare2').dataset.shareText = [
+      'ジョーバ',
+      `${state.cond.distance}m ${state.cond.going}を${h.name}で${rankLabels[rank] ?? rank+'着'}。`,
+      `称号「${title}」`,
+      `タイム：${time.toFixed(2)}秒 / スコア：${score}点`,
+      `ペース：${paceLabel(state)}`,
+      SHARE_URL
+    ].join('\n');
 
     document.getElementById('hud').style.display = 'none';
     document.getElementById('controls').style.display = 'none';
-    document.getElementById('btnSoundRace').style.display = 'none'; // Q5: HUDと連動
     // Clear previous ranking display before showing screen
     document.getElementById('submitStatus').textContent = '';
     document.getElementById('rankingBox').textContent = '';
     showScreen('screenResult');
 
     // Fire-and-forget: submit score and load ranking (hasSubmitted guards re-entry)
-    submitAndLoadRanking(score).catch(() => {});
+    const myToken = ++resultToken;
+    submitAndLoadRanking(score, myToken).catch(() => {});
   }
 
   document.getElementById('btnShare2').addEventListener('click', async () => {
     const btn = document.getElementById('btnShare2');
-    const text = btn.dataset.shareText ?? 'ジョーバをプレイしました！ #ジョーバ';
-    const shareData = { text, url: location.href };
+    const text = btn.dataset.shareText ?? ['ジョーバ', SHARE_URL].join('\n');
+    const shareData = { title: 'ジョーバ', text };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(text + ' ' + location.href);
+        await navigator.clipboard.writeText(text);
         const orig = btn.textContent;
         btn.textContent = 'コピーしました';
         setTimeout(() => { btn.textContent = orig; }, 1800);
@@ -4398,18 +3614,13 @@
     } catch (_) {}
   });
 
+
   document.getElementById('btnRetrySame').addEventListener('click', () => {
-    const snap = lastRaceSetup;
-    if (!snap || !snap.cond || !snap.field) {
-      // fallback: 新しいレースへ
-      resetAll();
-      goToCondScreen();
-      return;
-    }
-    resetAll();
-    // resetAll の後に pending / playerIdx を復元（lastRaceSetup は resetAll で消えない）
-    pending = { cond: snap.cond, field: snap.field };
-    playerIdx = snap.playerIdx;
+    if (!lastRaceSetup) return;
+    const saved = lastRaceSetup;
+    resetAll({ keepLastRaceSetup: true });
+    pending = { cond: saved.cond, field: saved.field, popularity: computePopularity(saved.field, saved.cond) };
+    playerIdx = saved.playerIdx;
     openGateScreen();
   });
 
@@ -4423,8 +3634,9 @@
     showScreen('screenTitle');
   });
 
-  function resetAll() {
-    // Remove all horse meshes (dispose geometries/materials to avoid memory leaks)
+  function resetAll(options = {}) {
+    resultToken++;
+    // Remove all horse meshes
     horseMeshes.forEach(m => { disposeObject3D(m); scene.remove(m); });
     horseMeshes = [];
     raceState = null;
@@ -4436,60 +3648,35 @@
     currentInput.hold = false;
     currentInput.laneDir = 0;
     currentInput.whip = false;
+    ['btnAccel','btnHold','btnWhip'].forEach(id => document.getElementById(id)?.classList.remove('pressed'));
     pickedIndices = [];
     pending = { cond: null, field: null };
+    if (!options.keepLastRaceSetup) lastRaceSetup = null;
     // Cancel any pending gate / ceremony timers
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
     clearTimeout(gateProceedTimeout);
+    clearTimeout(whipToastTimer);
+    clearTimeout(_milestoneTimer);
+    clearTimeout(laneToastTimer);
     _clearCeremonyTimers();
     _removeCeremonyTapHandler();
     gateSignalTime = null;
     gateTapHandled = false;
     gateSignalFired = false;
     gateEarlyTap = false;
-    lastStartLabel = '';
-    // Reset lane toast
-    clearTimeout(laneToastTimer);
-    laneToastTimer = null;
-    const toastEl = document.getElementById('laneToast');
-    if (toastEl) { toastEl.style.display = 'none'; toastEl.textContent = ''; }
-    // Reset mini map dots
-    miniDots.forEach(d => { d.style.transform = 'translate(0,-50%)'; });
-    // Q3: スローモーション・ゴール演出のリセット
+    gateSetVisible(false);
+    document.getElementById('whipEffectToast').style.display = 'none';
+    document.getElementById('milestoneToast').style.display = 'none';
+    document.getElementById('laneToast').style.display = 'none';
+    _milestonesCrossed = new Set();
+    clearGoalFx();
     slowMoT = 0;
     slowMoUsed = false;
-    clearGoalFx();
+    if (typeof instancedShadows !== 'undefined') instancedShadows.visible = false;
     // Reset weather to sunny default for title screen
     resetWeather();
-    // Q4: band/vibe/milestone/hint cleanup
-    _lastStaminaBand = -1;
-    _wasKakari = false;
-    _milestonesCrossed = new Set();
-    clearTimeout(_milestoneTimer);
-    _milestoneTimer = null;
-    if (_milestoneEl) _milestoneEl.style.display = 'none';
-    clearTimeout(_firstHintTimer);
-    _firstHintTimer = null;
-    const hintElReset = document.getElementById('firstHint');
-    if (hintElReset) hintElReset.style.display = 'none';
-    // Q5: レース中トグルを隠し、歓声ループを即座に絞り、タイマー類をリセット
-    const btnSoundRaceEl = document.getElementById('btnSoundRace');
-    if (btnSoundRaceEl) btnSoundRaceEl.style.display = 'none';
-    if (crowdGain && audioCtx) {
-      try {
-        const t = audioCtx.currentTime;
-        crowdGain.gain.cancelScheduledValues(t);
-        crowdGain.gain.setValueAtTime(crowdGain.gain.value, t);
-        crowdGain.gain.linearRampToValueAtTime(0, t + 0.2);
-      } catch (_) {}
-    }
-    _timeSincePlayerFinish = 0;
-    _hoofBeatIdx = -1;
   }
-
-  // Q4: スプラッシュ削除（Three.js CDNロード完了後）
-  document.getElementById('splash')?.remove();
 
   </script>
 </body>
