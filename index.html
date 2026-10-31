@@ -723,7 +723,7 @@
     </div>
     <p class="tip" style="font-size:13px;color:#9ab;margin-top:8px;margin-bottom:0;">横持ちプレイ推奨（縦でも遊べます）</p>
     <div class="sub-links">
-      <button id="btnShare">ゲームをシェア</button>
+      <button id="btnShare" class="common-x-share">Xでシェア</button><a class="common-ranking-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=johba">ランキング</a>
       <button id="btnSound">音ON</button>
       <a href="https://chameleonjp-lab.github.io/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
@@ -848,13 +848,70 @@
     <div id="resultBtns">
       <button id="btnRetrySame" class="btn-secondary">同じ条件でもう一度</button>
       <button id="btnRetry" class="btn-primary">新しいレースへ</button>
-      <button id="btnShare2" class="btn-secondary">結果をシェア</button>
+      <button id="btnShare2" class="btn-secondary common-x-share">Xでシェア</button><a class="common-ranking-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=johba">ランキング</a>
       <button id="btnToTitle" class="btn-secondary">タイトルへ</button>
       <a id="btnToLab" class="btn-tertiary" href="https://chameleonjp-lab.github.io/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
   </div>
 
-  <script>
+  <style>
+button.common-x-share { background:#000 !important; color:#fff !important; border:1px solid #555; white-space:normal; overflow-wrap:anywhere; min-height:44px; padding:12px 16px; line-height:1.4; }
+.common-ranking-link { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; min-height:44px; padding:12px 16px; border:1px solid currentColor; border-radius:10px; color:inherit; text-decoration:none; white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
+#commonShareFallback { box-sizing:border-box; width:min(92vw,32rem); max-height:85dvh; overflow:auto; border:1px solid #777; border-radius:12px; padding:20px; background:#fff; color:#111; }
+#commonShareFallback::backdrop { background:#0009; }
+#commonShareFallback textarea { box-sizing:border-box; width:100%; min-height:160px; padding:10px; font:16px/1.5 sans-serif; color:#111; background:#fff; user-select:text; -webkit-user-select:text; }
+#commonShareFallback button { min-height:44px; margin:6px; padding:10px 16px; white-space:normal; color:#fff; background:#222; }
+</style>
+<dialog id="commonShareFallback" aria-labelledby="commonShareHeading">
+  <h2 id="commonShareHeading">共有文をコピー</h2>
+  <p>Xを開けない場合は、本文とURLをコピーして投稿できます。</p>
+  <textarea id="commonShareText" readonly aria-label="共有する本文とURL"></textarea>
+  <p id="commonShareStatus" role="status" aria-live="polite"></p>
+  <button id="commonShareCopy" type="button">コピー</button>
+  <button id="commonShareClose" type="button">閉じる</button>
+</dialog>
+<script>
+(() => {
+  'use strict';
+  const dialog = document.getElementById('commonShareFallback');
+  const field = document.getElementById('commonShareText');
+  const status = document.getElementById('commonShareStatus');
+  window.openGameShareX = (text) => {
+    const body = String(text);
+    const intent = new URL('https://x.com/intent/post');
+    intent.searchParams.set('text', body);
+    let popup;
+    try {
+      popup = window.open('', '_blank');
+      if (popup) {
+        popup.opener = null;
+        popup.location.replace(intent.href);
+        return;
+      }
+    } catch (_) {
+      try { if (popup) popup.close(); } catch (_) {}
+    }
+    field.value = body;
+    status.textContent = '';
+    if (!dialog.open) dialog.showModal();
+    field.focus();
+    field.select();
+  };
+  document.getElementById('commonShareCopy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(field.value);
+      status.textContent = 'コピーしました。投稿はXで確認してください。';
+    } catch (_) {
+      field.focus();
+      field.select();
+      status.textContent = '本文を選択して手動でコピーしてください。';
+    }
+  });
+  document.getElementById('commonShareClose').addEventListener('click', () => dialog.close());
+})();
+</script>
+
+<script>
   setTimeout(function() {
     var s = document.getElementById('splash');
     if (s) {
@@ -3452,19 +3509,8 @@
     document.getElementById('rulesModal').style.display = 'none';
   });
 
-  document.getElementById('btnShare').addEventListener('click', async () => {
-    const shareData = { title: 'ジョーバ', url: location.href };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(location.href);
-        const btn = document.getElementById('btnShare');
-        const orig = btn.textContent;
-        btn.textContent = 'コピーしました';
-        setTimeout(() => { btn.textContent = orig; }, 1800);
-      }
-    } catch (_) {}
+  document.getElementById('btnShare').addEventListener('click', () => {
+    window.openGameShareX('ジョーバ\n馬の特徴と展開を読み、騎手として1着を目指す競馬ゲーム。\nhttps://chameleonjp.codeberg.page/johba/');
   });
 
   // ── Cond screen ──
@@ -4236,12 +4282,12 @@
       }
     }
 
-    // Load top-10 regardless of whether submit succeeded
+    // Load top-30 regardless of whether submit succeeded
     boxEl.textContent = 'ランキング読み込み中...';
     try {
       const rows = await supabaseRpc('get_best_score_ranking', {
         p_game_slug: CONFIG.GAME_SLUG,
-        p_limit:     10,
+        p_limit:     30,
       });
       renderRanking(rows, rawName);
     } catch (err) {
@@ -4382,20 +4428,9 @@
     submitAndLoadRanking(score).catch(() => {});
   }
 
-  document.getElementById('btnShare2').addEventListener('click', async () => {
-    const btn = document.getElementById('btnShare2');
-    const text = btn.dataset.shareText ?? 'ジョーバをプレイしました！ #ジョーバ';
-    const shareData = { text, url: location.href };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(text + ' ' + location.href);
-        const orig = btn.textContent;
-        btn.textContent = 'コピーしました';
-        setTimeout(() => { btn.textContent = orig; }, 1800);
-      }
-    } catch (_) {}
+  document.getElementById('btnShare2').addEventListener('click', () => {
+    const text = document.getElementById('btnShare2').dataset.shareText || 'ジョーバ';
+    window.openGameShareX(text + '\nhttps://chameleonjp.codeberg.page/johba/');
   });
 
   document.getElementById('btnRetrySame').addEventListener('click', () => {
