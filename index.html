@@ -725,6 +725,7 @@
     <div class="sub-links">
       <button id="btnShare" class="common-x-share">Xでシェア</button><a class="common-ranking-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=johba">ランキング</a>
       <button id="btnSound">音ON</button>
+      <label for="soundVolume">音量 <output id="soundVolumeLabel">100%</output><input id="soundVolume" type="range" min="0" max="1" step="0.05" value="1" style="width:100%;min-height:44px"></label>
       <a href="https://chameleonjp-lab.github.io/chameleonjp_lab/" target="_blank" rel="noopener">実験場へ</a>
     </div>
   </div>
@@ -3089,7 +3090,23 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   let crowdGain = null;        // 歓声ループ専用ゲイン（1度だけ生成）
   let crowdSrc = null;
   let _noiseBuffer = null;     // 共有 1s ホワイトノイズ（遅延生成）
-  let soundOn = (localStorage.getItem('johba_sound') !== 'off'); // 既定 ON
+  let soundOn = true;
+  let soundVolume = 1;
+  try {
+    soundOn = localStorage.getItem('johba_sound') !== 'off';
+    const saved = localStorage.getItem('johba_volume');
+    if (saved !== null && saved.trim() !== '' && Number.isFinite(Number(saved)) && Number(saved) >= 0 && Number(saved) <= 1) soundVolume = Number(saved);
+  } catch (_) { /* Storage denial must not prevent the game loading. */ }
+  const activeSoundNodes = new Set();
+  function scheduleSoundStop(source, nodes, at) {
+    const cleanup = () => { nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); activeSoundNodes.delete(source); };
+    source.onended = cleanup;
+    activeSoundNodes.add(source);
+    source.stop(at);
+  }
+  function stopOneShots() {
+    activeSoundNodes.forEach(source => { try { source.stop(); } catch (_) {} });
+  }
   let _hoofBeatIdx = -1;       // 直近に鳴らした蹄音ビート番号（増分検知用）
   let _timeSincePlayerFinish = 0; // 歓声フェードアウト用タイマー
 
@@ -3113,6 +3130,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   }
 
   function initAudio() {
+    if (!soundOn || soundVolume === 0 || document.hidden) return;
     if (audioCtx) {
       // 既存コンテキストが suspended（iOS など）なら再開を試みる
       if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
@@ -3123,7 +3141,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       if (!AC) return;
       audioCtx = new AC();
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = soundOn ? CONFIG.SND_MASTER : 0;
+      masterGain.gain.value = soundOn ? CONFIG.SND_MASTER * soundVolume : 0;
       masterGain.connect(audioCtx.destination);
 
       // 歓声ループ（ノイズ→バンドパス→専用ゲイン）を1度だけ構築。gain は 0 から。
@@ -3147,16 +3165,26 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
 
   function setSound(on) {
     soundOn = on;
+    if (on && soundVolume > 0) initAudio();
+    else stopOneShots();
     try { localStorage.setItem('johba_sound', on ? 'on' : 'off'); } catch (_) {}
     if (masterGain && audioCtx) {
       try {
         const t = audioCtx.currentTime;
         masterGain.gain.cancelScheduledValues(t);
         masterGain.gain.setValueAtTime(masterGain.gain.value, t);
-        masterGain.gain.linearRampToValueAtTime(on ? CONFIG.SND_MASTER : 0, t + 0.1);
+        masterGain.gain.linearRampToValueAtTime(on ? CONFIG.SND_MASTER * soundVolume : 0, t + 0.1);
       } catch (_) {}
     }
     updateSoundButtons();
+  }
+
+  function setSoundVolume(value) {
+    const next = Number(value);
+    if (!Number.isFinite(next) || next < 0 || next > 1) return;
+    soundVolume = next;
+    try { localStorage.setItem('johba_volume', String(next)); } catch (_) {}
+    setSound(soundOn);
   }
 
   function updateSoundButtons() {
@@ -3165,13 +3193,17 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     const b2 = document.getElementById('btnSoundRace');
     if (b1) b1.textContent = label;
     if (b2) b2.textContent = label;
+    const volume = document.getElementById('soundVolume');
+    const value = document.getElementById('soundVolumeLabel');
+    if (volume) volume.value = String(soundVolume);
+    if (value) value.textContent = Math.round(soundVolume * 100) + '%';
   }
 
   // ── 個別サウンド（すべてワンショット：ノードを作って start/stop → GC 任せ） ──
 
   // 蹄音1打：ノイズ→ローパス、短いエンベロープ。speed は m/s。
   function playHoof(speed) {
-    if (!audioCtx || !soundOn) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
       const src = audioCtx.createBufferSource();
@@ -3183,13 +3215,13 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const peak = CONFIG.SND_HOOF * (0.4 + 0.6 * Math.min(1, speed / 19));
       env(g, t, 0.004, peak, 0.056);
       src.connect(lp); lp.connect(g); g.connect(masterGain);
-      src.start(t); src.stop(t + 0.08);
+      src.start(t); scheduleSoundStop(src, [src, lp, g], t + 0.08);
     } catch (_) {}
   }
 
   // ゲート開放クラング：矩形波 220→90Hz + 高域ノイズバースト。
   function playGate() {
-    if (!audioCtx || !soundOn) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
@@ -3199,7 +3231,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const og = audioCtx.createGain();
       env(og, t, 0.004, CONFIG.SND_GATE, 0.12);
       osc.connect(og); og.connect(masterGain);
-      osc.start(t); osc.stop(t + 0.16);
+      osc.start(t); scheduleSoundStop(osc, [osc, og], t + 0.16);
 
       const src = audioCtx.createBufferSource();
       src.buffer = getNoiseBuffer();
@@ -3209,13 +3241,13 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const ng = audioCtx.createGain();
       env(ng, t, 0.004, CONFIG.SND_GATE * 0.8, 0.15);
       src.connect(hp); hp.connect(ng); ng.connect(masterGain);
-      src.start(t); src.stop(t + 0.18);
+      src.start(t); scheduleSoundStop(src, [src, hp, ng], t + 0.18);
     } catch (_) {}
   }
 
   // 鞭のクラック：高域ノイズの鋭いバースト + 短いピッチ落ちオシレータ。
   function playWhip() {
-    if (!audioCtx || !soundOn) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
       const src = audioCtx.createBufferSource();
@@ -3226,7 +3258,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const ng = audioCtx.createGain();
       env(ng, t, 0.002, CONFIG.SND_WHIP, 0.05);
       src.connect(hp); hp.connect(ng); ng.connect(masterGain);
-      src.start(t); src.stop(t + 0.08);
+      src.start(t); scheduleSoundStop(src, [src, hp, ng], t + 0.08);
 
       const osc = audioCtx.createOscillator();
       osc.type = 'sawtooth';
@@ -3235,13 +3267,13 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const og = audioCtx.createGain();
       env(og, t, 0.002, CONFIG.SND_WHIP * 0.5, 0.06);
       osc.connect(og); og.connect(masterGain);
-      osc.start(t); osc.stop(t + 0.09);
+      osc.start(t); scheduleSoundStop(osc, [osc, og], t + 0.09);
     } catch (_) {}
   }
 
   // 掛かり警告：三角波 880Hz→988Hz の短い2連ビープ。
   function playKakariAlert() {
-    if (!audioCtx || !soundOn) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
       [[880, 0], [988, 0.1]].forEach(([freq, off]) => {
@@ -3252,14 +3284,14 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
         const g = audioCtx.createGain();
         env(g, t0, 0.006, CONFIG.SND_ALERT, 0.084);
         osc.connect(g); g.connect(masterGain);
-        osc.start(t0); osc.stop(t0 + 0.12);
+        osc.start(t0); scheduleSoundStop(osc, [osc, g], t0 + 0.12);
       });
     } catch (_) {}
   }
 
   // マイルストーンのティック：サイン 1320Hz。最後の直線（dur===1000）は 1320→1760 の2連。
   function playTick(isFinal) {
-    if (!audioCtx || !soundOn) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
       const notes = isFinal ? [[1320, 0], [1760, 0.09]] : [[1320, 0]];
@@ -3271,14 +3303,14 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
         const g = audioCtx.createGain();
         env(g, t0, 0.004, CONFIG.SND_TICK, 0.066);
         osc.connect(g); g.connect(masterGain);
-        osc.start(t0); osc.stop(t0 + 0.09);
+        osc.start(t0); scheduleSoundStop(osc, [osc, g], t0 + 0.09);
       });
     } catch (_) {}
   }
 
   // ゴール音：1着＝上昇トライアド、2–3着＝2音、その他＝単音。
   function playGoal(rank) {
-    if (!audioCtx || !soundOn) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
       let notes;
@@ -3295,7 +3327,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
         const g = audioCtx.createGain();
         env(g, t0, 0.006, CONFIG.SND_GOAL, dur);
         osc.connect(g); g.connect(masterGain);
-        osc.start(t0); osc.stop(t0 + dur + 0.05);
+        osc.start(t0); scheduleSoundStop(osc, [osc, g], t0 + dur + 0.05);
       });
     } catch (_) {}
   }
@@ -3303,7 +3335,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   // 毎フレーム：プレイヤー馬の蹄音発火 + 歓声スウェルの追従。
   // raceState が null でも安全（呼び出し側は running 中のみ呼ぶが念のためガード）。
   function updateAudio(state, dt) {
-    if (!audioCtx || !soundOn || !state) return;
+    if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running' || !state) return;
     try {
       const h = state.horses[state.playerIndex];
 
@@ -3343,8 +3375,11 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   document.addEventListener('visibilitychange', () => {
     if (!audioCtx) return;
     try {
-      if (document.hidden) audioCtx.suspend();
-      else if (soundOn) audioCtx.resume();
+      if (document.hidden) {
+        stopOneShots();
+        if (crowdGain) crowdGain.gain.value = 0;
+        audioCtx.suspend().catch(() => {});
+      } else if (soundOn && soundVolume > 0) audioCtx.resume().catch(() => {});
     } catch (_) {}
   });
 
@@ -3354,6 +3389,8 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   if (_btnSoundTitle) _btnSoundTitle.addEventListener('click', () => setSound(!soundOn));
   const _btnSoundRace = document.getElementById('btnSoundRace');
   if (_btnSoundRace) _btnSoundRace.addEventListener('click', () => setSound(!soundOn));
+
+  document.getElementById('soundVolume').addEventListener('input', event => setSoundVolume(event.target.value));
 
   // ==== SECTION: UI-SCREENS ====
 
