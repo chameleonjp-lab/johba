@@ -4488,7 +4488,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     await loadRanking(play);
   }
   document.getElementById('btnSubmitRetry').addEventListener('click', () => {
-    if (activeRankingPlay?.score !== null) submitAndLoadRanking(activeRankingPlay.score);
+    if (activeRankingPlay && activeRankingPlay.score != null) submitAndLoadRanking(activeRankingPlay.score);
   });
   document.getElementById('btnRankingRetry').addEventListener('click', () => loadRanking());
   function renderSavedResults() {

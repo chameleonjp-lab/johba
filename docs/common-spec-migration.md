@@ -170,3 +170,7 @@ AudioContextが`interrupted`になった場合も`suspended`と同様に、音�
 検証は実HTMLから抽出した音処理11件、全体39件、構文5blocks、既存sim10。Safariの`interrupted`の扱いは [MDN BaseAudioContext.state](https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/state) の説明を参照した実装で、iPhone実機や実際の聴感を確認した意味ではない。適用後も、共有画面/画面ロックから戻った際の実機確認と音量の聴感確認は残る。
 
 第三段階は実装者以外のレビューで差分・音制御だけの変更・SIM不変を確認し、audio11/全39 tests・構文5blocks・diff検査を独立実行した。追加の重大不具合は見つからなかった。実機・聴感・長時間実ブラウザ負荷は未確認のまま。
+
+### 全差分レビュー後の再送ボタン保護
+
+ホームへ戻った直後など、進行中の結果が存在しない状態で遅延した再送クリックが届くと、score参照が例外になる箇所を修正。activeなプレイと確定scoreがある場合だけ再送処理へ進む。null/undefined/未確定score/ホーム移動後は何も送信せず終了する。回帰テストで例外を再現してから修正し、全40 tests・構文5blocks・stage・sim10で確認した。参加者識別や30人集計の不足をこの修正で解消した扱いにはしない。

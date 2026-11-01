@@ -55,3 +55,14 @@ test('integration hides stale ranking response when newer fetch completes first'
 test('ranking error exposes read-only retry without submitting a score',async()=>{
  let n=0;const {ctx,nodes}=uiSetup(async(fn)=>{assert.equal(fn,'get_best_score_ranking');if(n++===0)throw Error('offline');return [];});ctx.beginRankingPlay();await ctx.loadRanking();assert.equal(nodes.get('btnRankingRetry').hidden,false);await nodes.get('btnRankingRetry').events.click();assert.equal(nodes.get('rankingBox').textContent,'まだ記録がありません');
 });
+test('late retry with absent or unfinished active play is a no-op without any RPC',async()=>{
+ let calls=0;const {ctx,nodes}=uiSetup(async()=>{calls++;return [];});
+ for(const value of ['null','undefined','{score:null}','{score:undefined}']){
+  vm.runInContext('activeRankingPlay = '+value,ctx);
+  assert.doesNotThrow(()=>nodes.get('btnSubmitRetry').events.click(),value);
+ }
+ nodes.get('playerName').value='Rider';ctx.beginRankingPlay();
+ vm.runInContext('activeRankingPlay = null',ctx); // Home clears the active result before a queued click arrives.
+ assert.doesNotThrow(()=>nodes.get('btnSubmitRetry').events.click());
+ await Promise.resolve();assert.equal(calls,0);
+});
