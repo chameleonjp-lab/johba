@@ -27,6 +27,8 @@ jobs:
       - run: python3 tools/check-site.py
       - run: node tools/share.test.mjs
       - run: node tools/audio.test.mjs
+      - run: node tools/participation.test.mjs
+      - run: node tools/ranking.test.mjs
       - run: node tools/sim-harness.mjs 10 random 1 random
       - name: Stage the validated public file
         run: python3 tools/check-site.py --out _site
@@ -66,3 +68,4 @@ jobs:
       - name: Deploy only the artifact from this validated commit
         id: deployment
         uses: actions/deploy-pages@v4
+

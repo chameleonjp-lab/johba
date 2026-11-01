@@ -715,8 +715,10 @@
     <div id="playerNameWrap">
       <label for="playerName">騎手名（ランキング用・10文字まで）</label>
       <input id="playerName" type="text" maxlength="10" autocomplete="nickname" placeholder="名前を入力">
-      <span id="nameWarn">騎手名を入力してください</span>
+      <span id="nameWarn" role="status"></span>
+      <p id="nameConsent">名前を入力すると、名前と記録がランキングに公開されます。空欄でも遊べます。</p>
     </div>
+    <details id="savedResults"><summary>この端末に保存した結果・再送</summary><div id="savedResultList"></div></details>
     <div class="title-btns">
       <button id="btnStart" class="btn-primary">レース開始</button>
       <button id="btnRules" class="btn-secondary">ルール説明</button>
@@ -844,7 +846,9 @@
     <div id="rankingSection">
       <h3>ランキング（ベストスコア）</h3>
       <div id="submitStatus"></div>
-      <div id="rankingBox"></div>
+      <div id="rankingBox" role="status" aria-live="polite"></div>
+      <button id="btnRankingRetry" class="btn-secondary" hidden>ランキングを再取得</button>
+      <button id="btnSubmitRetry" class="btn-secondary" hidden>この記録の送信を再試行</button>
     </div>
     <div id="resultBtns">
       <button id="btnRetrySame" class="btn-secondary">同じ条件でもう一度</button>
@@ -3510,32 +3514,19 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   let playerIdx = 0;
 
   // ── Title screen + name input ──
-  // Load persisted name on startup
+  let nameComposing = false;
   (function loadPlayerName() {
-    const saved = localStorage.getItem('johba_player_name') ?? '';
-    document.getElementById('playerName').value = saved;
+    try { document.getElementById('playerName').value = localStorage.getItem('johba_player_name') ?? ''; } catch (_) {}
   })();
-
+  document.getElementById('playerName').addEventListener('compositionstart', () => { nameComposing = true; });
+  document.getElementById('playerName').addEventListener('compositionend', () => { nameComposing = false; });
   document.getElementById('playerName').addEventListener('input', () => {
     const inp = document.getElementById('playerName');
-    localStorage.setItem('johba_player_name', inp.value);
-    // Clear name validation error when user starts typing
-    const warn = document.getElementById('nameWarn');
-    warn.style.display = 'none';
-    inp.classList.remove('name-error');
+    try { localStorage.setItem('johba_player_name', inp.value); } catch (_) {}
   });
-
-  document.getElementById('btnStart').addEventListener('click', () => {
-    if (!audioCtx) initAudio(); // Q5: 最初のユーザー操作で AudioContext を作成（自動再生制限対策）
-    const inp = document.getElementById('playerName');
-    const name = inp.value.trim();
-    if (!name) {
-      const warn = document.getElementById('nameWarn');
-      warn.style.display = 'block';
-      inp.classList.add('name-error');
-      inp.focus();
-      return;
-    }
+  document.getElementById('btnStart').addEventListener('click', (event) => {
+    if (nameComposing || event.isComposing) return;
+    if (!audioCtx) initAudio();
     goToCondScreen();
   });
 
@@ -3552,6 +3543,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
 
   // ── Cond screen ──
   function goToCondScreen() {
+    beginRankingPlay();
     gameRng = makeRng(Date.now() & 0xffffffff);
     const cond = createRaceConditions(gameRng);
     const field = generateField(gameRng, cond);
@@ -3844,11 +3836,11 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   let gateSignalTimeout = null;
   let gateFeedbackTimeout = null;
   let gateProceedTimeout = null;
+  let lastStartOutcome = ''; // Stable enum: good / fair / late / false; never translated.
   let lastStartLabel = '';         // 結果画面の騎乗メモ用（好スタート/まずまず/出遅れ/フライング）
   let lastRaceSetup = null;        // 同じ条件でもう一度：スナップショット { cond, field, playerIdx }
 
   function openGateScreen() {
-    hasSubmitted = false; // reset per-race submission guard
     // スナップショット：同じ条件でもう一度ボタン用（resetAllより前に保存すること）
     lastRaceSetup = { cond: pending.cond, field: pending.field, playerIdx };
     const { cond, field } = pending;
@@ -3909,6 +3901,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     gateTapHandled = false;
     gateSignalFired = false;
     gateEarlyTap = false;
+    lastStartOutcome = '';
     lastStartLabel = '';
     clearTimeout(gateSignalTimeout);
     clearTimeout(gateFeedbackTimeout);
@@ -3962,6 +3955,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     if (gateEarlyTap) {
       // 判定は保存済み：以降のタップは受け付けず、そのままレースへ
       gateTapHandled = true;
+      lastStartOutcome = 'false';
       lastStartLabel = 'フライング';
       showGateFeedback('フライングのぶん出遅れ...', '#ffaa44');
       proceedToRace();
@@ -3973,7 +3967,8 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       if (!gateTapHandled) {
         gateTapHandled = true;
         raceState.playerStartDelay = 1.2;
-        lastStartLabel = '出遅れ';
+        lastStartOutcome = 'late';
+      lastStartLabel = '出遅れ';
         showGateFeedback('出遅れた...', '#ff6666');
         proceedToRace();
       }
@@ -4002,16 +3997,19 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       delay = 0.05;
       feedback = '好スタート！';
       color = '#44ffaa';
+      lastStartOutcome = 'good';
       lastStartLabel = '好スタート';
     } else if (dt <= 0.3) {
       delay = dt;
       feedback = 'まずまずのスタート';
       color = '#ffe066';
+      lastStartOutcome = 'fair';
       lastStartLabel = 'まずまず';
     } else {
       delay = Math.min(dt, 1.2);
       feedback = '出遅れた...';
       color = '#ff6666';
+      lastStartOutcome = 'late';
       lastStartLabel = '出遅れ';
     }
 
@@ -4032,13 +4030,13 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
 
   // Q4: 初回操作ヒント
   function showFirstHintIfNeeded() {
-    if (localStorage.getItem('johba_hint_done')) return;
+    try { if (localStorage.getItem('johba_hint_done')) return; } catch (_) {}
     const el = document.getElementById('firstHint');
     if (!el) return;
     el.style.display = 'block';
     function dismissHint() {
       el.style.display = 'none';
-      localStorage.setItem('johba_hint_done', '1');
+      try { localStorage.setItem('johba_hint_done', '1'); } catch (_) {}
       clearTimeout(_firstHintTimer);
       _firstHintTimer = null;
       el.removeEventListener('pointerdown', dismissHint);
@@ -4247,7 +4245,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
-      if (!res.ok) throw new Error(`RPC ${fn} failed: ${res.status}`);
+      if (!res.ok) { const error = new Error(`RPC ${fn} failed: ${res.status}`); error.status = res.status; throw error; }
       return await res.json();
     } finally {
       clearTimeout(t);
@@ -4258,7 +4256,8 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   function renderRanking(rows, playerName) {
     const box = document.getElementById('rankingBox');
     box.innerHTML = '';
-    if (!Array.isArray(rows) || rows.length === 0) {
+    if (Array.isArray(rows) && rows.length === 0) { box.textContent = 'まだ記録がありません'; return; }
+    if (!Array.isArray(rows)) {
       box.textContent = 'ランキングを取得できませんでした';
       return;
     }
@@ -4267,9 +4266,9 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const name  = r.display_name ?? r.name ?? '?';
       const score = r.score ?? '?';
       if (name === '?' && score === '?') return; // skip unreadable rows
-      const isMe = playerName && name === playerName;
+      // A display name is not proof of participant identity.
       const row = document.createElement('div');
-      row.className = 'rank-row' + (isMe ? ' my-row' : '');
+      row.className = 'rank-row';
       // display_name は他プレイヤー由来の外部データ。innerHTMLに入れるとXSSになるため
       // 必ず textContent で組み立てる
       const mk = (cls, text) => {
@@ -4288,57 +4287,153 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     }
   }
 
-  // ── Module-level submission guard (reset per race in openGateScreen) ──
-  let hasSubmitted = false;
-
-  // ── submitAndLoadRanking ──
-  async function submitAndLoadRanking(score) {
-    if (hasSubmitted) return;
-    hasSubmitted = true; // guard set BEFORE any await
-
-    const statusEl = document.getElementById('submitStatus');
-    const boxEl    = document.getElementById('rankingBox');
-    const rawName  = (localStorage.getItem('johba_player_name') ?? '').trim();
-
-    // If name is empty: skip submit but still load ranking
-    if (!rawName) {
-      statusEl.textContent = '名前未入力のためランキング未送信（タイトル画面で入力できます）';
-    } else {
-      statusEl.textContent = 'ランキング送信中...';
-      try {
-        await supabaseRpc('submit_score', {
-          p_display_name:   rawName,
-          p_game_slug:      CONFIG.GAME_SLUG,
-          p_score:          Math.round(score),
-          p_client_version: CONFIG.CLIENT_VERSION,
-        });
-        statusEl.textContent = 'ランキング送信完了';
-      } catch (err) {
-        statusEl.textContent = 'ランキング送信失敗（スコアはこの画面でのみ表示）';
-        console.warn('[johba] submit_score failed:', err);
-      }
-    }
-
-    // Load top-30 regardless of whether submit succeeded
-    boxEl.textContent = 'ランキング読み込み中...';
+  // ==== PARTICIPATION-BEGIN ====
+  const RECEIPT_PREFIX = 'johba_score_receipt_v1:';
+  const receiptMemory = new Map();
+  const receiptFlights = new Map();
+  function createRankingPlay(rawName) {
+    const name = String(rawName ?? '').trim().slice(0, 10);
+    let id = null;
+    try { id = crypto.randomUUID(); } catch (_) {}
+    const play = { id, game: CONFIG.GAME_SLUG, name, version: CONFIG.CLIENT_VERSION, score: null, status: name ? 'playing' : 'anonymous', persisted: false };
+    // The receipt identifies a play, NOT a new participant. The legacy server's
+    // name-key limitation remains documented; never reassign existing records.
+    Object.defineProperties(play, {id:{writable:false},name:{writable:false},game:{writable:false},version:{writable:false}});
+    if (id) receiptMemory.set(id, play);
+    return play;
+  }
+  function saveRankingPlay(play) {
+    if (!play.id || play.score === null) return;
+    try { localStorage.setItem(RECEIPT_PREFIX + play.id, JSON.stringify(play)); play.persisted = true; } catch (_) { play.persisted = false; }
+  }
+  function finalizeRankingPlay(play, score) {
+    if (play.score !== null || !Number.isFinite(score)) return;
+    Object.defineProperty(play, 'score', {value:Math.round(score), writable:false, enumerable:true});
+    play.status = play.name ? 'pending' : 'anonymous';
+    saveRankingPlay(play);
+  }
+  function restoreRankingPlay(id) {
+    if (receiptMemory.has(id)) return receiptMemory.get(id);
     try {
-      const rows = await supabaseRpc('get_best_score_ranking', {
-        p_game_slug: CONFIG.GAME_SLUG,
-        p_limit:     30,
-      });
-      renderRanking(rows, rawName);
-    } catch (err) {
-      boxEl.textContent = 'ランキングを取得できませんでした';
-      console.warn('[johba] get_best_score_ranking failed:', err);
+      const p = JSON.parse(localStorage.getItem(RECEIPT_PREFIX + id));
+      if (!p || p.id !== id || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || p.game !== CONFIG.GAME_SLUG || typeof p.name !== 'string' || p.name.length > 10 || !Number.isSafeInteger(p.score) || p.score < 0 || typeof p.version !== 'string' || !['pending','sending','failed','sent','anonymous','rejected'].includes(p.status)) return null;
+      if (p.status === 'sending') p.status = 'failed';
+      Object.defineProperties(p, {id:{writable:false},name:{writable:false},game:{writable:false},version:{writable:false},score:{writable:false}});
+      receiptMemory.set(id,p); return p;
+    } catch (_) { return null; }
+  }
+  function listRankingPlays() {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(RECEIPT_PREFIX)) restoreRankingPlay(key.slice(RECEIPT_PREFIX.length));
+      }
+    } catch (_) {}
+    return [...receiptMemory.values()].filter(p => p.score !== null);
+  }
+  async function sendRankingPlay(play) {
+    if (!play || !play.name || play.score === null || play.status === 'sent' || play.status === 'rejected') return;
+    if (!play.id) { play.status = 'failed'; return; }
+    if (receiptFlights.has(play.id)) return receiptFlights.get(play.id);
+    play.status = 'sending'; saveRankingPlay(play);
+    const request = (async () => {
+      try {
+        const rows = await supabaseRpc('submit_score_once_shared_v1', {
+          p_submission_id:play.id, p_display_name:play.name, p_game_slug:play.game,
+          p_score:play.score, p_client_version:play.version,
+        });
+        if (!Array.isArray(rows) || rows[0]?.accepted !== true) { play.status = 'rejected'; return; }
+        play.status = 'sent';
+      } catch (error) {
+        // An ambiguous network failure may already have committed. Reuse the same
+        // receipt on retry; NEVER downgrade to non-idempotent submit_score.
+        play.status = [400,403,409,422].includes(error.status) ? 'rejected' : 'failed';
+      } finally { saveRankingPlay(play); }
+    })();
+    receiptFlights.set(play.id, request);
+    try { await request; } finally { receiptFlights.delete(play.id); }
+  }
+  // ==== PARTICIPATION-END ====
+
+  let activeRankingPlay = null;
+  let rankingRequestVersion = 0;
+  function beginRankingPlay() {
+    activeRankingPlay = createRankingPlay(document.getElementById('playerName').value);
+    rankingRequestVersion++;
+  }
+  function showSubmissionStatus(play) {
+    const labels = {
+      anonymous:'名前なしでプレイしたため、この記録は公開されません。',
+      pending:'ランキング送信待ち', sending:'ランキング送信中...', sent:'ランキング送信完了',
+      failed:'ランキング送信を確認できません。結果を保持しています。同じ記録で再試行できます。',
+      rejected:'ランキングに登録できませんでした。結果は保持されています。',
+    };
+    document.getElementById('submitStatus').textContent = (labels[play.status] || '') +
+      (play.name && !play.persisted ? ' この端末では保存できないため、この画面を閉じると再送できません。' : '');
+    document.getElementById('btnSubmitRetry').hidden = !['failed','pending'].includes(play.status) || !play.id;
+    document.getElementById('btnSubmitRetry').disabled = play.status === 'sending';
+  }
+  async function loadRanking(play = activeRankingPlay) {
+    const version = ++rankingRequestVersion;
+    const box = document.getElementById('rankingBox');
+    document.getElementById('btnRankingRetry').hidden = true;
+    box.textContent = 'ランキング読み込み中...';
+    try {
+      const rows = await supabaseRpc('get_best_score_ranking', {p_game_slug:CONFIG.GAME_SLUG,p_limit:30});
+      if (version !== rankingRequestVersion || play !== activeRankingPlay) return;
+      if (!Array.isArray(rows)) throw new Error('Invalid ranking response');
+      renderRanking(rows);
+    } catch (_) {
+      if (version !== rankingRequestVersion || play !== activeRankingPlay) return;
+      box.textContent = 'ランキングを取得できませんでした';
+      document.getElementById('btnRankingRetry').hidden = false;
     }
   }
+  async function submitAndLoadRanking(score) {
+    const play = activeRankingPlay;
+    if (!play) return;
+    finalizeRankingPlay(play, score);
+    const sending = sendRankingPlay(play);
+    showSubmissionStatus(play);
+    await sending;
+    if (play !== activeRankingPlay) return;
+    showSubmissionStatus(play);
+    await loadRanking(play);
+  }
+  document.getElementById('btnSubmitRetry').addEventListener('click', () => {
+    if (activeRankingPlay?.score !== null) submitAndLoadRanking(activeRankingPlay.score);
+  });
+  document.getElementById('btnRankingRetry').addEventListener('click', () => loadRanking());
+  function renderSavedResults() {
+    const box = document.getElementById('savedResultList');
+    box.replaceChildren();
+    const plays = listRankingPlays();
+    if (!plays.length) { box.textContent = '保存した結果はありません'; return; }
+    for (const play of plays) {
+      const row = document.createElement('p');
+      const stateText = {pending:'送信待ち',sending:'送信中',failed:'送信未確認',sent:'送信済み',anonymous:'非公開',rejected:'登録不可'}[play.status] || '未確認';
+      row.textContent = `${play.name || '名前なし'}：${play.score}点 / ${stateText} `;
+      if (play.name && play.id && ['pending','failed'].includes(play.status)) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'btn-secondary'; button.textContent = 'この記録の送信を再試行';
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          await sendRankingPlay(play);
+          renderSavedResults();
+        });
+        row.appendChild(button);
+      }
+      box.appendChild(row);
+    }
+  }
+  renderSavedResults();
 
   // ── 結果称号 ──
   function generateResultTitle(state, rank) {
     const ps = state.playerStats;
     const playerDef = state.field[state.playerIndex];
     // 優先順位：先にマッチしたものを返す
-    if (rank === 1 && lastStartLabel === '好スタート')
+    if (rank === 1 && lastStartOutcome === 'good')
       return '好発進の名騎手';
     if (rank === 1 && ps.staminaAtFinish !== null && ps.staminaAtFinish < 0.08)
       return '絞り切り勝利';
@@ -4352,7 +4447,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       return '暴れ馬に振り回された';
     if (ps.staminaAtFinish !== null && ps.staminaAtFinish > 0.35 && rank >= 4)
       return '脚を余した騎乗';
-    if (lastStartLabel === 'フライング')
+    if (lastStartOutcome === 'false')
       return '気が早い騎手';
     if (rank <= 3)
       return '馬券圏内の堅実派';
@@ -4461,8 +4556,9 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     document.getElementById('rankingBox').textContent = '';
     showScreen('screenResult');
 
-    // Fire-and-forget: submit score and load ranking (hasSubmitted guards re-entry)
-    submitAndLoadRanking(score).catch(() => {});
+    // Fire-and-forget: submit score and load ranking (per-play receipts guard re-entry)
+    if (playerResult) submitAndLoadRanking(score).catch(() => {});
+    else loadRanking();
   }
 
   document.getElementById('btnShare2').addEventListener('click', () => {
@@ -4482,6 +4578,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     // resetAll の後に pending / playerIdx を復元（lastRaceSetup は resetAll で消えない）
     pending = { cond: snap.cond, field: snap.field };
     playerIdx = snap.playerIdx;
+    beginRankingPlay();
     openGateScreen();
   });
 
@@ -4493,9 +4590,12 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   document.getElementById('btnToTitle').addEventListener('click', () => {
     resetAll();
     showScreen('screenTitle');
+    renderSavedResults();
   });
 
   function resetAll() {
+    rankingRequestVersion++;
+    activeRankingPlay = null;
     // Remove all horse meshes (dispose geometries/materials to avoid memory leaks)
     horseMeshes.forEach(m => { disposeObject3D(m); scene.remove(m); });
     horseMeshes = [];
@@ -4520,6 +4620,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     gateTapHandled = false;
     gateSignalFired = false;
     gateEarlyTap = false;
+    lastStartOutcome = '';
     lastStartLabel = '';
     // Reset lane toast
     clearTimeout(laneToastTimer);
@@ -4566,3 +4667,4 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   </script>
 </body>
 </html>
+
