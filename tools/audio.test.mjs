@@ -49,3 +49,19 @@ test('interruption disconnects immediately even when the ended event is deferred
  const x=setup({},false,true);x.api.setSound(true);x.api.playGate();assert.equal(x.api.state().active,2);
  const ctx=x.api.context();ctx.state='interrupted';ctx.onstatechange();assert.equal(x.api.state().active,0);
 });
+test('failed scheduled stop disconnects every allocated voice without leaking active entries',()=>{
+ const x=setup();x.api.setSound(true);const ctx=x.api.context();const original=ctx.createOscillator.bind(ctx);const nodes=[];
+ ctx.createBufferSource=ctx.createOscillator=()=>{const n=original();n.stop=()=>{throw Error('stop unavailable');};nodes.push(n);return n;};
+ x.api.playGate();assert.equal(x.api.state().active,0);assert.ok(nodes.every(n=>n.disconnected));
+});
+test('delayed interruption notification clears old voices before gesture resume',()=>{
+ const x=setup({},false,true);x.api.setSound(true);x.api.playGate();const ctx=x.api.context();ctx.state='interrupted';x.api.initAudio();assert.equal(x.api.state().active,0);
+});
+
+test('independent: closed context recreates and clears old voices on next enabled gesture',()=>{
+ const x=setup({},false,true);x.api.setSound(true);x.api.playGate();const old=x.api.context();old.state='closed';x.api.initAudio();assert.notEqual(x.api.context(),old);assert.equal(x.api.state().active,0);
+});
+test('independent: partial allocation failure disconnects voice already created',()=>{
+ const x=setup();x.api.setSound(true);const ctx=x.api.context();const original=ctx.createOscillator.bind(ctx);const made=[];
+ ctx.createOscillator=()=>{const n=original();made.push(n);return n;};ctx.createGain=()=>{throw Error('allocation failed');};x.api.playGate();assert.ok(made.length>0);assert.ok(made.every(n=>n.disconnected));
+});

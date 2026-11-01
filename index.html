@@ -3172,11 +3172,28 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     if (saved !== null && saved.trim() !== '' && Number.isFinite(Number(saved)) && Number(saved) >= 0 && Number(saved) <= 1) soundVolume = Number(saved);
   } catch (_) { /* Storage denial must not prevent the game loading. */ }
   const activeSoundNodes = new Set();
+  let crowdNodes = [];
+  function makeAudioNode(method, nodes) {
+    const node = audioCtx[method](); nodes.push(node); return node;
+  }
+  function releaseAudioNodes(nodes) {
+    nodes.forEach(node => {
+      try { node.stop?.(); } catch (_) {}
+      try { node.disconnect(); } catch (_) {}
+      activeSoundNodes.delete(node);
+    });
+  }
+  function disposeAudio() {
+    stopOneShots(); releaseAudioNodes(crowdNodes); crowdNodes = [];
+    try { audioCtx?.close?.()?.catch?.(() => {}); } catch (_) {}
+    audioCtx = masterGain = crowdGain = crowdSrc = _noiseBuffer = null;
+    lastWhipSoundTime = -Infinity;
+  }
   function scheduleSoundStop(source, nodes, at) {
     const cleanup = () => { nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); activeSoundNodes.delete(source); };
     source.onended = cleanup;
     activeSoundNodes.add(source);
-    source.stop(at);
+    try { source.stop(at); } catch (_) { cleanup(); }
   }
   function stopOneShots() {
     activeSoundNodes.forEach(source => {
@@ -3209,9 +3226,12 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
 
   function initAudio() {
     if (!soundOn || soundVolume === 0 || document.hidden) return;
+    if (audioCtx?.state === 'closed') disposeAudio();
     if (audioCtx) {
       // Resume an interrupted or suspended context only while the saved setting allows sound.
       if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+        stopOneShots();
+        if (crowdGain) crowdGain.gain.value = 0;
         try { audioCtx.resume().catch(() => {}); } catch (_) {}
       }
       return;
@@ -3226,29 +3246,31 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
           if (crowdGain) crowdGain.gain.value = 0;
         }
       };
-      masterGain = audioCtx.createGain();
+      masterGain = makeAudioNode('createGain', crowdNodes);
       masterGain.gain.value = soundOn ? CONFIG.SND_MASTER * soundVolume : 0;
       masterGain.connect(audioCtx.destination);
 
       // 歓声ループ（ノイズ→バンドパス→専用ゲイン）を1度だけ構築。gain は 0 から。
-      crowdGain = audioCtx.createGain();
+      crowdGain = makeAudioNode('createGain', crowdNodes);
       crowdGain.gain.value = 0;
       crowdGain.connect(masterGain);
-      const band = audioCtx.createBiquadFilter();
+      const band = makeAudioNode('createBiquadFilter', crowdNodes);
       band.type = 'bandpass';
       band.frequency.value = 800;
       band.Q.value = 0.6;
       band.connect(crowdGain);
-      crowdSrc = audioCtx.createBufferSource();
+      crowdSrc = makeAudioNode('createBufferSource', crowdNodes);
       crowdSrc.buffer = getNoiseBuffer();
       crowdSrc.loop = true;
       crowdSrc.connect(band);
       crowdSrc.start();
 
       if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+        stopOneShots();
+        if (crowdGain) crowdGain.gain.value = 0;
         try { audioCtx.resume().catch(() => {}); } catch (_) {}
       }
-    } catch (_) { audioCtx = null; }
+    } catch (_) { disposeAudio(); }
   }
 
   function setSound(on) {
@@ -3292,116 +3314,122 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   // 蹄音1打：ノイズ→ローパス、短いエンベロープ。speed は m/s。
   function playHoof(speed) {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
+    const allocated = [];
     try {
       const t = audioCtx.currentTime;
-      const src = audioCtx.createBufferSource();
+      const src = makeAudioNode('createBufferSource', allocated);
       src.buffer = getNoiseBuffer();
-      const lp = audioCtx.createBiquadFilter();
+      const lp = makeAudioNode('createBiquadFilter', allocated);
       lp.type = 'lowpass';
       lp.frequency.value = 350 + speed * 12;
-      const g = audioCtx.createGain();
+      const g = makeAudioNode('createGain', allocated);
       const peak = CONFIG.SND_HOOF * (0.4 + 0.6 * Math.min(1, speed / 19));
       env(g, t, 0.004, peak, 0.056);
       src.connect(lp); lp.connect(g); g.connect(masterGain);
       src.start(t); scheduleSoundStop(src, [src, lp, g], t + 0.08);
-    } catch (_) {}
+    } catch (_) { releaseAudioNodes(allocated); }
   }
 
   // ゲート開放クラング：矩形波 220→90Hz + 高域ノイズバースト。
   function playGate() {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
+    const allocated = [];
     try {
       const t = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
+      const osc = makeAudioNode('createOscillator', allocated);
       osc.type = 'square';
       osc.frequency.setValueAtTime(220, t);
       osc.frequency.exponentialRampToValueAtTime(90, t + 0.12);
-      const og = audioCtx.createGain();
+      const og = makeAudioNode('createGain', allocated);
       env(og, t, 0.004, CONFIG.SND_GATE, 0.12);
       osc.connect(og); og.connect(masterGain);
       osc.start(t); scheduleSoundStop(osc, [osc, og], t + 0.16);
 
-      const src = audioCtx.createBufferSource();
+      const src = makeAudioNode('createBufferSource', allocated);
       src.buffer = getNoiseBuffer();
-      const hp = audioCtx.createBiquadFilter();
+      const hp = makeAudioNode('createBiquadFilter', allocated);
       hp.type = 'highpass';
       hp.frequency.value = 2000;
-      const ng = audioCtx.createGain();
+      const ng = makeAudioNode('createGain', allocated);
       env(ng, t, 0.004, CONFIG.SND_GATE * 0.8, 0.15);
       src.connect(hp); hp.connect(ng); ng.connect(masterGain);
       src.start(t); scheduleSoundStop(src, [src, hp, ng], t + 0.18);
-    } catch (_) {}
+    } catch (_) { releaseAudioNodes(allocated); }
   }
 
   // 鞭のクラック：高域ノイズの鋭いバースト + 短いピッチ落ちオシレータ。
   let lastWhipSoundTime = -Infinity;
   function playWhip() {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
+    const allocated = [];
     try {
       const t = audioCtx.currentTime;
       if (t - lastWhipSoundTime < 0.08) return;
       lastWhipSoundTime = t;
-      const src = audioCtx.createBufferSource();
+      const src = makeAudioNode('createBufferSource', allocated);
       src.buffer = getNoiseBuffer();
-      const hp = audioCtx.createBiquadFilter();
+      const hp = makeAudioNode('createBiquadFilter', allocated);
       hp.type = 'highpass';
       hp.frequency.value = 2500;
-      const ng = audioCtx.createGain();
+      const ng = makeAudioNode('createGain', allocated);
       env(ng, t, 0.002, CONFIG.SND_WHIP, 0.05);
       src.connect(hp); hp.connect(ng); ng.connect(masterGain);
       src.start(t); scheduleSoundStop(src, [src, hp, ng], t + 0.08);
 
-      const osc = audioCtx.createOscillator();
+      const osc = makeAudioNode('createOscillator', allocated);
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(900, t);
       osc.frequency.exponentialRampToValueAtTime(500, t + 0.06);
-      const og = audioCtx.createGain();
+      const og = makeAudioNode('createGain', allocated);
       env(og, t, 0.002, CONFIG.SND_WHIP * 0.5, 0.06);
       osc.connect(og); og.connect(masterGain);
       osc.start(t); scheduleSoundStop(osc, [osc, og], t + 0.09);
-    } catch (_) {}
+    } catch (_) { releaseAudioNodes(allocated); }
   }
 
   // 掛かり警告：三角波 880Hz→988Hz の短い2連ビープ。
   function playKakariAlert() {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
+    const allocated = [];
     try {
       const t = audioCtx.currentTime;
       [[880, 0], [988, 0.1]].forEach(([freq, off]) => {
         const t0 = t + off;
-        const osc = audioCtx.createOscillator();
+        const osc = makeAudioNode('createOscillator', allocated);
         osc.type = 'triangle';
         osc.frequency.value = freq;
-        const g = audioCtx.createGain();
+        const g = makeAudioNode('createGain', allocated);
         env(g, t0, 0.006, CONFIG.SND_ALERT, 0.084);
         osc.connect(g); g.connect(masterGain);
         osc.start(t0); scheduleSoundStop(osc, [osc, g], t0 + 0.12);
       });
-    } catch (_) {}
+    } catch (_) { releaseAudioNodes(allocated); }
   }
 
   // マイルストーンのティック：サイン 1320Hz。最後の直線（dur===1000）は 1320→1760 の2連。
   function playTick(isFinal) {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
+    const allocated = [];
     try {
       const t = audioCtx.currentTime;
       const notes = isFinal ? [[1320, 0], [1760, 0.09]] : [[1320, 0]];
       notes.forEach(([freq, off]) => {
         const t0 = t + off;
-        const osc = audioCtx.createOscillator();
+        const osc = makeAudioNode('createOscillator', allocated);
         osc.type = 'sine';
         osc.frequency.value = freq;
-        const g = audioCtx.createGain();
+        const g = makeAudioNode('createGain', allocated);
         env(g, t0, 0.004, CONFIG.SND_TICK, 0.066);
         osc.connect(g); g.connect(masterGain);
         osc.start(t0); scheduleSoundStop(osc, [osc, g], t0 + 0.09);
       });
-    } catch (_) {}
+    } catch (_) { releaseAudioNodes(allocated); }
   }
 
   // ゴール音：1着＝上昇トライアド、2–3着＝2音、その他＝単音。
   function playGoal(rank) {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
+    const allocated = [];
     try {
       const t = audioCtx.currentTime;
       let notes;
@@ -3412,15 +3440,15 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       notes.forEach((freq, i) => {
         const t0 = t + i * 0.09;
         const dur = single ? 0.2 : 0.12;
-        const osc = audioCtx.createOscillator();
+        const osc = makeAudioNode('createOscillator', allocated);
         osc.type = 'sine';
         osc.frequency.value = freq;
-        const g = audioCtx.createGain();
+        const g = makeAudioNode('createGain', allocated);
         env(g, t0, 0.006, CONFIG.SND_GOAL, dur);
         osc.connect(g); g.connect(masterGain);
         osc.start(t0); scheduleSoundStop(osc, [osc, g], t0 + dur + 0.05);
       });
-    } catch (_) {}
+    } catch (_) { releaseAudioNodes(allocated); }
   }
 
   // 毎フレーム：プレイヤー馬の蹄音発火 + 歓声スウェルの追従。
@@ -4351,7 +4379,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     rows.forEach(r => {
       const no    = r.rank_no ?? r.rank ?? '?';
       const name  = r.display_name ?? r.name ?? '?';
-      const score = r.score ?? '?';
+      const score = r.best_score ?? r.score ?? '?';
       if (name === '?' && score === '?') return; // skip unreadable rows
       // A display name is not proof of participant identity.
       const row = document.createElement('div');
@@ -4382,6 +4410,8 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     const name = String(rawName ?? '').trim().slice(0, 10);
     let id = null;
     try { id = crypto.randomUUID(); } catch (_) {}
+    if (receiptMemory.has(id)) id = null;
+    try { if (id && localStorage.getItem(RECEIPT_PREFIX + id) !== null) id = null; } catch (_) { /* Save must later verify the disk before any transmission. */ }
     const play = { id, game: CONFIG.GAME_SLUG, name, version: CONFIG.CLIENT_VERSION, score: null, status: name ? 'playing' : 'anonymous', persisted: false };
     // The receipt identifies a play, NOT a new participant. The legacy server's
     // name-key limitation remains documented; never reassign existing records.
@@ -4390,8 +4420,20 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     return play;
   }
   function saveRankingPlay(play) {
-    if (!play.id || play.score === null) return;
-    try { localStorage.setItem(RECEIPT_PREFIX + play.id, JSON.stringify(play)); play.persisted = true; } catch (_) { play.persisted = false; }
+    if (!play.id || play.score === null) return false;
+    try {
+      const key = RECEIPT_PREFIX + play.id;
+      const previous = localStorage.getItem(key);
+      if (previous) {
+        const saved = JSON.parse(previous);
+        if (['id','name','game','version','score'].some(k => saved[k] !== play[k])) throw new Error('Receipt payload conflict');
+        if (saved.status === 'sent') play.status = 'sent';
+      }
+      const bytes = JSON.stringify({...play, persisted:true});
+      localStorage.setItem(key, bytes);
+      play.persisted = localStorage.getItem(key) === bytes;
+    } catch (_) { play.persisted = false; }
+    return play.persisted;
   }
   function finalizeRankingPlay(play, score) {
     if (play.score !== null || !Number.isFinite(score)) return;
@@ -4403,7 +4445,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     if (receiptMemory.has(id)) return receiptMemory.get(id);
     try {
       const p = JSON.parse(localStorage.getItem(RECEIPT_PREFIX + id));
-      if (!p || p.id !== id || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || p.game !== CONFIG.GAME_SLUG || typeof p.name !== 'string' || p.name.length > 10 || !Number.isSafeInteger(p.score) || p.score < 0 || typeof p.version !== 'string' || !['pending','sending','failed','sent','anonymous','rejected'].includes(p.status)) return null;
+      if (!p || p.id !== id || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || p.game !== CONFIG.GAME_SLUG || typeof p.name !== 'string' || p.name.length > 10 || p.name !== p.name.trim() || ((!p.name) !== (p.status === 'anonymous')) || !Number.isSafeInteger(p.score) || p.score < 0 || typeof p.version !== 'string' || !['pending','sending','failed','sent','anonymous','rejected'].includes(p.status)) return null;
       if (p.status === 'sending') p.status = 'failed';
       Object.defineProperties(p, {id:{writable:false},name:{writable:false},game:{writable:false},version:{writable:false},score:{writable:false}});
       receiptMemory.set(id,p); return p;
@@ -4419,17 +4461,29 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     return [...receiptMemory.values()].filter(p => p.score !== null);
   }
   async function sendRankingPlay(play) {
-    if (!play || !play.name || play.score === null || play.status === 'sent' || play.status === 'rejected') return;
+    if (!play || !play.name || play.score === null || play.status === 'anonymous' || play.status === 'rejected') return;
+    if (play.status === 'sent') { if (!play.persisted) saveRankingPlay(play); return; }
     if (!play.id) { play.status = 'failed'; return; }
     if (receiptFlights.has(play.id)) return receiptFlights.get(play.id);
-    play.status = 'sending'; saveRankingPlay(play);
+    play.status = 'sending';
+    if (!saveRankingPlay(play)) { play.status = 'failed'; return; }
+    if (play.status === 'sent') return;
     const request = (async () => {
       try {
         const rows = await supabaseRpc('submit_score_once_shared_v1', {
           p_submission_id:play.id, p_display_name:play.name, p_game_slug:play.game,
           p_score:play.score, p_client_version:play.version,
         });
-        if (!Array.isArray(rows) || rows[0]?.accepted !== true) { play.status = 'rejected'; return; }
+        // The deployed migration returns one TABLE row with nine fields, not
+        // an accepted-only JSON acknowledgement. Unknown replies remain retryable.
+        const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+        const integers = ['result_first_score','result_best_score','result_play_count'];
+        const flags = ['accepted','is_first_play','is_new_best','was_duplicate'];
+        if (!row || flags.some(k => typeof row[k] !== 'boolean') ||
+            integers.some(k => !Number.isSafeInteger(row[k])) || row.result_play_count < 1 ||
+            row.result_normalized_name !== play.name || row.result_display_name !== play.name ||
+            row.result_best_score < play.score) throw new Error('Unconfirmed receipt');
+        if (!row.accepted) { play.status = 'rejected'; return; }
         play.status = 'sent';
       } catch (error) {
         // An ambiguous network failure may already have committed. Reuse the same
@@ -4457,7 +4511,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     };
     document.getElementById('submitStatus').textContent = (labels[play.status] || '') +
       (play.name && !play.persisted ? ' ' + t('submission.noStorage') : '');
-    document.getElementById('btnSubmitRetry').hidden = !['failed','pending'].includes(play.status) || !play.id;
+    document.getElementById('btnSubmitRetry').hidden = !(['failed','pending'].includes(play.status) || (play.status === 'sent' && !play.persisted)) || !play.id;
     document.getElementById('btnSubmitRetry').disabled = play.status === 'sending';
   }
   async function loadRanking(play = activeRankingPlay) {
@@ -4500,7 +4554,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       const row = document.createElement('p');
       const stateText = {pending:t("status.pending"),sending:t("status.sending"),failed:t("status.failed"),sent:t("status.sent"),anonymous:t("status.anonymous"),rejected:t("status.rejected")}[play.status] || t("status.unknown");
       row.textContent = t('saved.row',{name:play.name || t('name.anonymous'),score:play.score,status:stateText}) + ' ';
-      if (play.name && play.id && ['pending','failed'].includes(play.status)) {
+      if (play.name && play.id && (['pending','failed'].includes(play.status) || (play.status === 'sent' && !play.persisted))) {
         const button = document.createElement('button');
         button.type = 'button'; button.className = 'btn-secondary'; button.textContent = t("submission.retry");
         button.addEventListener('click', async () => {

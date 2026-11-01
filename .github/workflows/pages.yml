@@ -15,7 +15,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +32,9 @@ jobs:
       - run: node tools/i18n.test.mjs
       - run: node tools/input.test.mjs
       - run: node tools/sim-harness.mjs 10 random 1 random
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
       - name: Stage the validated public file
         run: python3 tools/check-site.py --out _site
       - name: Upload this commit's Pages artifact

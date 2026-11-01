@@ -1,0 +1,60 @@
+import {test,expect} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const origin='https://johba.test';
+const langs=['ja','en','es','pt-BR','zh-Hans','fr','de','ko','ru','it','zh-Hant','id','tr','vi','th'];
+// Test-only access is appended to the served module, never shipped in index.html.
+const instrument=`\nwindow.testGame={createRankingPlay,finalizeRankingPlay,sendRankingPlay,listRankingPlays,loadRanking,beginRankingPlay,showScreen,resetAll,initAudio,stopOneShots,get context(){return audioCtx},setSoundVolume,setSound,playWhip,get play(){return activeRankingPlay},get audio(){return {on:soundOn,volume:soundVolume,voices:activeSoundNodes.size,state:audioCtx?.state}},finish(){const rng=makeRng(17);const cond=createRaceConditions(rng,{distance:1200});const field=generateField(rng,cond);const state=createRaceState(field,cond,rng,-1);for(let i=0;i<24000&&state.finishedCount<field.length;i++)stepRace(state,1/60,null);state.playerIndex=0;showFinishScreen(state);return activeRankingPlay?.score;}};\n`;
+async function setup(page,opts={}){
+ const state={submissions:[],reads:[],pendingReads:[],pendingSends:[],mode:'ok',rows:[],errors:[],...opts};page.on('pageerror',e=>state.errors.push(e.message));
+ await page.addInitScript(opts=>{localStorage.setItem('johba_language',opts.lang||'ja');if(opts.sound!==undefined)localStorage.setItem('johba_sound',opts.sound);if(opts.volume!==undefined)localStorage.setItem('johba_volume',opts.volume);if(opts.mockAudio){const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){},cancelScheduledValues(){}});const node=()=>({gain:param(),frequency:param(),Q:param(),connect(){},disconnect(){this.disconnected=true},start(){},stop(){}});window.AudioContext=class{constructor(){this.state='running';this.currentTime=0;this.sampleRate=8;this.destination={}}createGain(){return node()}createOscillator(){return node()}createBiquadFilter(){return node()}createBufferSource(){return node()}createBuffer(){return {getChannelData:()=>new Float32Array(8)}}resume(){this.state='running';return Promise.resolve()}};}window.open=()=>null;window.copied=[];Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>window.copied.push(text)}});},opts);
+ await page.context().route('**/*',async route=>{
+ const url=new URL(route.request().url());
+ if(url.origin===origin)return route.fulfill({contentType:'text/html',body:html.replace("  import * as THREE from 'three';","  import * as THREE from 'three';"+instrument)});
+ if(url.origin==='https://cdn.jsdelivr.net'&&url.pathname.startsWith('/npm/three@0.184.0/build/'))return route.fulfill({headers:{'access-control-allow-origin':'*'},contentType:'text/javascript',body:readFileSync(new URL('../node_modules/three/build/'+url.pathname.split('/').pop(),import.meta.url),'utf8')});
+ if(url.pathname.includes('/rest/v1/rpc/')){
+ if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':'apikey,authorization,content-type'}});
+ const method=url.pathname.split('/').pop(),p=route.request().postDataJSON();
+ if(method==='submit_score_once_shared_v1'){
+ state.submissions.push(p);if(state.delaySend)await new Promise(r=>state.pendingSends.push(r));if(state.mode==='error')return route.fulfill({headers:{'access-control-allow-origin':'*'},status:503,json:{message:'offline'}});
+ return route.fulfill({headers:{'access-control-allow-origin':'*'},json:state.mode==='malformed'?[{accepted:true}]:[{accepted:true,result_normalized_name:p.p_display_name,result_display_name:p.p_display_name,result_first_score:p.p_score,result_best_score:p.p_score,result_play_count:1,is_first_play:true,is_new_best:true,was_duplicate:false}]});
+ }
+ state.reads.push({method,...p});const rows=state.rows;if(state.delayRank)await new Promise(r=>state.pendingReads.push(r));if(state.rankError)return route.fulfill({headers:{'access-control-allow-origin':'*'},status:503,json:{message:'offline'}});return route.fulfill({headers:{'access-control-allow-origin':'*'},json:rows});
+ }
+ return route.abort();
+ });
+ await page.goto(origin);await page.waitForFunction(()=>window.testGame);await expect(page.locator('#screenTitle')).toBeVisible();await expect(page.locator('#splash')).toHaveCount(0);return state;
+}
+async function finish(page){await page.evaluate(()=>window.testGame.finish());await expect(page.locator('#screenResult')).toBeVisible();await expect(page.locator('#rankingBox')).not.toHaveText('');}
+for(const lang of langs)test(`${lang}: home, race conditions, actual simulated result, ties and share`,async({page})=>{
+ const s=await setup(page,{lang,rows:[{rank_no:1,display_name:'<b>Rider</b>',first_score:500,best_score:1000,play_count:2},{rank_no:1,display_name:'Peer',first_score:500,best_score:1000,play_count:2}]});
+ await expect(page.locator('#languageSelect option')).toHaveCount(15);await expect(page.locator('html')).toHaveAttribute('lang',lang);
+ await page.locator('#playerName').fill('騎手');await page.locator('#btnStart').click();await expect(page.locator('#screenCond')).toBeVisible();
+ await page.locator('#playerName').evaluate(e=>e.value='Changed');await finish(page);
+ await expect.poll(()=>s.submissions.length).toBe(1);expect(s.submissions[0].p_display_name).toBe('騎手');
+ await expect(page.locator('.rank-row')).toHaveCount(2);await expect(page.locator('.rank-name').first()).toHaveText('<b>Rider</b>');expect(await page.locator('.rank-name b').count()).toBe(0);
+ await expect(page.locator('.rank-score').first()).toContainText('1000');expect(s.reads[0].p_limit).toBe(30);await page.locator('#btnShare2').click();await page.locator('#commonShareCopy').click();expect((await page.evaluate(()=>window.copied.at(-1)))).toContain('https://chameleonjp.codeberg.page/johba/');
+ await expect(page.locator('#btnShare2')).toHaveCSS('background-color','rgb(0, 0, 0)');await expect(page.locator('#btnShare2')).toHaveCSS('color','rgb(255, 255, 255)');
+ for(const size of [{width:320,height:568},{width:844,height:390},{width:390,height:320}]){await page.setViewportSize(size);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}
+ expect(s.errors).toEqual([]);
+});
+for(const name of ['', '   '])test(`guest ${JSON.stringify(name)} never publicly submits`,async({page})=>{const s=await setup(page);await page.locator('#playerName').fill(name);await page.locator('#btnStart').click();await finish(page);await page.locator('#playerName').evaluate(e=>e.value='Later');await page.evaluate(()=>window.testGame.sendRankingPlay(window.testGame.play));expect(s.submissions).toHaveLength(0);expect(s.errors).toEqual([]);});
+test('IME composition and key229 cannot start; saved off and zero survive reload',async({page})=>{const s=await setup(page,{sound:'off',volume:'0'});await page.locator('#playerName').dispatchEvent('compositionstart');await page.locator('#btnStart').click();await expect(page.locator('#screenTitle')).toBeVisible();await page.locator('#playerName').dispatchEvent('keydown',{key:'Enter',keyCode:229,isComposing:true});await expect(page.locator('#screenTitle')).toBeVisible();await page.locator('#playerName').dispatchEvent('compositionend');await page.reload();await page.waitForFunction(()=>window.testGame);await expect(page.locator('#splash')).toHaveCount(0);expect(await page.evaluate(()=>window.testGame.audio)).toMatchObject({on:false,volume:0});expect(s.errors).toEqual([]);});
+test('storage quota/readback failure blocks RPC, then same UUID retries malformed and offline receipts',async({page})=>{
+ const s=await setup(page);await page.locator('#playerName').fill('A');await page.locator('#btnStart').click();await page.evaluate(()=>{window.originalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('johba_score_receipt'))throw Error('quota');return originalSet.call(this,k,v)}});await finish(page);expect(s.submissions).toHaveLength(0);expect(await page.evaluate(()=>window.testGame.play.status)).toBe('failed');const id=await page.evaluate(()=>window.testGame.play.id);
+ await page.evaluate(()=>Storage.prototype.setItem=window.originalSet);s.mode='malformed';await page.locator('#btnSubmitRetry').click();await expect.poll(()=>page.evaluate(()=>window.testGame.play.status)).toBe('failed');s.mode='error';await page.locator('#btnSubmitRetry').click();await expect.poll(()=>s.submissions.length).toBe(2);s.mode='ok';await page.locator('#btnSubmitRetry').click();await expect.poll(()=>page.evaluate(()=>window.testGame.play.status)).toBe('sent');expect(s.submissions.map(p=>p.p_submission_id)).toEqual([id,id,id]);expect(s.errors).toEqual([]);
+});
+test('ranking failure then empty retry is read-only; initial sound is on/nonzero',async({page})=>{const s=await setup(page,{rankError:true});expect(await page.evaluate(()=>window.testGame.audio)).toMatchObject({on:true,volume:1});await page.locator('#btnStart').click();await finish(page);await expect(page.locator('#btnRankingRetry')).toBeVisible();s.rankError=false;await page.locator('#btnRankingRetry').click();await expect(page.locator('#rankingBox')).toHaveText('まだ記録がありません');expect(s.submissions).toHaveLength(0);expect(s.errors).toEqual([]);});
+test('old ranking reply cannot replace newer result or new-play state',async({page})=>{
+ const s=await setup(page,{delayRank:true,rows:[{rank_no:1,display_name:'Old',best_score:2}]});await page.locator('#btnStart').click();await page.evaluate(()=>window.testGame.finish());await expect.poll(()=>s.pendingReads.length).toBe(1);
+ s.delayRank=false;s.rows=[{rank_no:1,display_name:'New',best_score:3}];await page.evaluate(()=>window.testGame.loadRanking());await expect(page.locator('.rank-name')).toHaveText('New');s.pendingReads.shift()();await page.waitForTimeout(100);await expect(page.locator('.rank-name')).toHaveText('New');expect(s.submissions).toHaveLength(0);expect(s.errors).toEqual([]);
+});
+test('delayed old-play ACK keeps original name UUID and cannot mark newer play sent',async({page})=>{
+ const s=await setup(page,{delaySend:true});await page.locator('#playerName').fill('Original');await page.locator('#btnStart').click();await page.evaluate(()=>window.testGame.finish());await expect.poll(()=>s.pendingSends.length).toBe(1);const old=s.submissions[0];
+ await page.evaluate(()=>{document.getElementById('playerName').value='New';window.testGame.beginRankingPlay();});const current=await page.evaluate(()=>({id:window.testGame.play.id,status:window.testGame.play.status}));expect(current.id).not.toBe(old.p_submission_id);s.pendingSends.shift()();await expect.poll(()=>page.evaluate(()=>window.testGame.listRankingPlays().find(p=>p.name==='Original').status)).toBe('sent');expect(await page.evaluate(()=>window.testGame.play.status)).toBe('playing');expect(s.submissions).toHaveLength(1);expect(s.errors).toEqual([]);
+});
+test('audio interruption drops queued voices before resume and off/zero remain silent',async({page})=>{
+ const s=await setup(page,{mockAudio:true});await page.locator('#btnStart').click();expect(await page.evaluate(()=>{testGame.playWhip();return testGame.audio.voices})).toBeGreaterThan(0);
+ expect(await page.evaluate(()=>{testGame.context.state='interrupted';testGame.initAudio();return testGame.audio.voices})).toBe(0);
+ await page.evaluate(()=>{testGame.setSound(false);testGame.context.state='interrupted';testGame.initAudio();testGame.playWhip()});expect(await page.evaluate(()=>testGame.audio)).toMatchObject({on:false,voices:0,state:'interrupted'});await page.evaluate(()=>{testGame.setSoundVolume(0);testGame.setSound(true);testGame.playWhip()});expect(await page.evaluate(()=>testGame.audio.voices)).toBe(0);expect(s.errors).toEqual([]);
+});
