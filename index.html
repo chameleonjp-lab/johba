@@ -3179,7 +3179,11 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
     source.stop(at);
   }
   function stopOneShots() {
-    activeSoundNodes.forEach(source => { try { source.stop(); } catch (_) {} });
+    activeSoundNodes.forEach(source => {
+      try { source.stop(); } catch (_) {}
+      // Disconnect immediately too: interrupted contexts may defer the ended event.
+      try { source.onended?.(); } catch (_) {}
+    });
   }
   let _hoofBeatIdx = -1;       // 直近に鳴らした蹄音ビート番号（増分検知用）
   let _timeSincePlayerFinish = 0; // 歓声フェードアウト用タイマー
@@ -3206,14 +3210,22 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   function initAudio() {
     if (!soundOn || soundVolume === 0 || document.hidden) return;
     if (audioCtx) {
-      // 既存コンテキストが suspended（iOS など）なら再開を試みる
-      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      // Resume an interrupted or suspended context only while the saved setting allows sound.
+      if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+        try { audioCtx.resume().catch(() => {}); } catch (_) {}
+      }
       return;
     }
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       audioCtx = new AC();
+      audioCtx.onstatechange = () => {
+        if (!audioCtx || audioCtx.state !== 'running') {
+          stopOneShots();
+          if (crowdGain) crowdGain.gain.value = 0;
+        }
+      };
       masterGain = audioCtx.createGain();
       masterGain.gain.value = soundOn ? CONFIG.SND_MASTER * soundVolume : 0;
       masterGain.connect(audioCtx.destination);
@@ -3233,7 +3245,9 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
       crowdSrc.connect(band);
       crowdSrc.start();
 
-      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+        try { audioCtx.resume().catch(() => {}); } catch (_) {}
+      }
     } catch (_) { audioCtx = null; }
   }
 
@@ -3320,10 +3334,13 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   }
 
   // 鞭のクラック：高域ノイズの鋭いバースト + 短いピッチ落ちオシレータ。
+  let lastWhipSoundTime = -Infinity;
   function playWhip() {
     if (!audioCtx || !soundOn || soundVolume === 0 || document.hidden || audioCtx.state !== 'running') return;
     try {
       const t = audioCtx.currentTime;
+      if (t - lastWhipSoundTime < 0.08) return;
+      lastWhipSoundTime = t;
       const src = audioCtx.createBufferSource();
       src.buffer = getNoiseBuffer();
       const hp = audioCtx.createBiquadFilter();
