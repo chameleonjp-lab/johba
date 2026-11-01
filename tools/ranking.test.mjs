@@ -1,12 +1,14 @@
+import {loadI18n} from './test-i18n-helper.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const i18n=loadI18n(html); const t=i18n.t;
 function setup(rpc=async()=>[{accepted:true}],store=new Map()) {
  const code=html.match(/\/\/ ==== PARTICIPATION-BEGIN ====([\s\S]*?)\/\/ ==== PARTICIPATION-END ====/)?.[1];
  assert.ok(code,'production participation controller exists');
- let n=0;const ctx={crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++n).padStart(12,'0')}`},localStorage:{get length(){return store.size;},key:i=>[...store.keys()][i],getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},CONFIG:{GAME_SLUG:'johba',CLIENT_VERSION:'test'},supabaseRpc:rpc};vm.createContext(ctx);vm.runInContext(code,ctx);return {ctx,store};
+ let n=0;const ctx={t,window:{addEventListener(){}},crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++n).padStart(12,'0')}`},localStorage:{get length(){return store.size;},key:i=>[...store.keys()][i],getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},CONFIG:{GAME_SLUG:'johba',CLIENT_VERSION:'test'},supabaseRpc:rpc};vm.createContext(ctx);vm.runInContext(code,ctx);return {ctx,store};
 }
 test('anonymous play cannot become public after later home-name edit',async()=>{let calls=0;const {ctx}=setup(async()=>{calls++;});const p=ctx.createRankingPlay('   ');ctx.finalizeRankingPlay(p,123);await ctx.sendRankingPlay(p);assert.equal(calls,0);assert.equal(p.status,'anonymous');});
 test('start-name and finalized score remain fixed, repeated submission uses one receipt',async()=>{
@@ -32,13 +34,13 @@ test('reload lists finalized records without sending and ignores unrelated game 
 test('empty ranking is not a transport failure; matching names do not claim identity',()=>{
  const code=html.slice(html.indexOf('  function renderRanking('),html.indexOf('  // ==== PARTICIPATION-BEGIN'));
  const box={children:[],textContent:'',set innerHTML(v){this.children=[];},appendChild(c){this.children.push(c);}};
- const ctx={document:{getElementById:()=>box,createElement:()=>({children:[],appendChild(c){this.children.push(c);}})}};vm.createContext(ctx);vm.runInContext(code,ctx);
+ const ctx={t,window:{addEventListener(){}},document:{getElementById:()=>box,createElement:()=>({children:[],appendChild(c){this.children.push(c);}})}};vm.createContext(ctx);vm.runInContext(code,ctx);
  ctx.renderRanking([],'A');assert.equal(box.textContent,'まだ記録がありません');
  ctx.renderRanking([{rank_no:1,display_name:'A',score:99}],'A');assert.equal(box.children[0].className,'rank-row');
 });
 function uiSetup(rpc) {
  const nodes=new Map();for(const id of ['playerName','submitStatus','rankingBox','btnSubmitRetry','btnRankingRetry','savedResultList'])nodes.set(id,{replaceChildren(){this.children=[];this.textContent='';},value:'',textContent:'',children:[],hidden:false,events:{},set innerHTML(v){this.children=[];},appendChild(c){this.children.push(c);},addEventListener(e,fn){this.events[e]=fn;}});
- const ctx={crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000001'},localStorage:{getItem:()=>null,setItem(){}},CONFIG:{GAME_SLUG:'johba',CLIENT_VERSION:'test'},supabaseRpc:rpc,document:{getElementById:id=>nodes.get(id),createElement:()=>({children:[],appendChild(c){this.children.push(c);}})}};
+ const ctx={t,window:{addEventListener(){}},crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000001'},localStorage:{getItem:()=>null,setItem(){}},CONFIG:{GAME_SLUG:'johba',CLIENT_VERSION:'test'},supabaseRpc:rpc,document:{getElementById:id=>nodes.get(id),createElement:()=>({children:[],appendChild(c){this.children.push(c);}})}};
  const code=html.slice(html.indexOf('  function renderRanking('),html.indexOf('  // ── 結果称号'));
  vm.createContext(ctx);vm.runInContext(code,ctx);return {ctx,nodes};
 }

@@ -1,8 +1,10 @@
+import {loadI18n} from './test-i18n-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const i18n=loadI18n(html); const t=i18n.t;
 const code=html.split('// ==== SECTION: AUDIO ====')[1].split('// ==== SECTION: UI-SCREENS ====')[0];
 function setup(saved={},denied=false){
  const elements=new Map();const listeners={};let contexts=0;
@@ -16,7 +18,7 @@ function setup(saved={},denied=false){
  }
  const document={hidden:false,addEventListener(k,v){listeners[k]=v;},getElementById(id){if(!elements.has(id))elements.set(id,{value:'',textContent:'',addEventListener(){}});return elements.get(id);}};
  const storage={getItem(k){if(denied)throw new Error('denied');return saved[k]??null;},setItem(k,v){if(denied)throw new Error('denied');saved[k]=v;}};
- const context=vm.createContext({document,localStorage:storage,window:{AudioContext},CONFIG:{SND_MASTER:.5,SND_GATE:.1},Math,Number,Set});
+ const context=vm.createContext({t,document,localStorage:storage,window:{AudioContext},CONFIG:{SND_MASTER:.5,SND_GATE:.1},Math,Number,Set});
  vm.runInContext(code+';globalThis.api={setSound,setSoundVolume,initAudio,playGate,state:()=>({on:soundOn,volume:soundVolume,active:activeSoundNodes.size,gain:masterGain?.gain.value})};',context);
  return {api:context.api,document,listeners,saved,contexts:()=>contexts};
 }
@@ -27,3 +29,4 @@ test('volume persists including zero without changing off preference',()=>{const
 test('denied storage does not prevent settings or audio',()=>{const x=setup({},true);x.api.setSound(false);x.api.setSoundVolume(.25);x.api.setSound(true);assert.equal(x.api.state().gain,.125);});
 test('hide stops scheduled effects; muted return never resumes them',()=>{const x=setup();x.api.setSound(true);x.api.playGate();assert.equal(x.api.state().active,2);x.document.hidden=true;x.listeners.visibilitychange();assert.equal(x.api.state().active,0);x.api.setSound(false);x.document.hidden=false;x.listeners.visibilitychange();x.api.playGate();assert.equal(x.api.state().active,0);});
 test('invalid saved volumes use the existing nonzero default',()=>{for(const value of ['','NaN','-1','2'])assert.equal(setup({johba_volume:value}).api.state().volume,1);});
+

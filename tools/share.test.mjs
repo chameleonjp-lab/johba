@@ -1,9 +1,11 @@
+import {loadI18n} from './test-i18n-helper.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
 
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const i18n=loadI18n(html); const t=i18n.t;
 const helper=html.match(/<script>\s*(\(\(\) => \{\s*'use strict';\s*const dialog = document\.getElementById\('commonShareFallback'\);[\s\S]*?\}\)\(\);)\s*<\/script>/)?.[1];
 assert.ok(helper,'The actual inline share helper must be present');
 function setup(open=()=>null,writeText=async()=>{}) {
@@ -11,7 +13,7 @@ function setup(open=()=>null,writeText=async()=>{}) {
   for(const id of ['commonShareFallback','commonShareText','commonShareStatus','commonShareCopy','commonShareClose']) {
     nodes.set(id,{value:'',textContent:'',open:false,events:{},addEventListener(name,cb){this.events[name]=cb;},showModal(){this.open=true;},close(){this.open=false;},focus(){},select(){this.selected=true;}});
   }
-  const window={open};
+  const window={open,JohbaI18n:i18n};
   vm.runInNewContext(helper,{window,document:{getElementById:id=>nodes.get(id)},navigator:{clipboard:{writeText}},URL});
   return {window,nodes};
 }
@@ -53,5 +55,6 @@ test('copy success is a copy acknowledgement; closing never modifies result text
 });
 test('home and result each have a verified detail link and exact Japanese X label',()=>{
   assert.equal((html.match(/>Xでシェア<\/button>/g)||[]).length,2);
-  assert.equal((html.match(/class="common-ranking-link" href="https:\/\/chameleonjp-lab.github.io\/chameleonjp_lab\/ranking.html\?game=[^"]+">ランキング<\/a>/g)||[]).length,2);
+  assert.equal((html.match(/class="common-ranking-link" href="https:\/\/chameleonjp-lab.github.io\/chameleonjp_lab\/ranking.html\?game=[^"]+"[^>]*>ランキング<\/a>/g)||[]).length,2);
 });
+
