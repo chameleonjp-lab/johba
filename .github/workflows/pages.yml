@@ -3,13 +3,13 @@ name: Validate and deploy Pages
 on:
   pull_request:
   push:
-    branches: ["claude/eager-wozniak-1oe5zz"]
+    branches: ["claude/eager-wozniak-1oe5zz", "codex/share-thumbnail-20261102"]
 
 permissions:
   contents: read
 
 concurrency:
-  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  group: pages-${{ github.event_name == 'push' && github.ref == 'refs/heads/claude/eager-wozniak-1oe5zz' && 'production' || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,16 +35,23 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:browser
+      - name: Save anonymous actual-game capture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: johba-share-capture
+          path: test-results/share-capture/
+          if-no-files-found: ignore
       - name: Stage the validated public file
         run: python3 tools/check-site.py --out _site
       - name: Upload this commit's Pages artifact
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/eager-wozniak-1oe5zz'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/claude/eager-wozniak-1oe5zz'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
