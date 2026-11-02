@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {inspectShareTarget} from '../tests/helpers/share-visibility.mjs';
+function fixture({target={},parent={},root={},styles={}}={}){
+ const rect=v=>({left:0,top:0,right:393,bottom:852,width:393,height:852,...v});
+ const doc={};const win={innerWidth:393,innerHeight:852,getComputedStyle:n=>({display:'block',visibility:'visible',opacity:'1',overflowX:'visible',overflowY:'visible',...n.style})};doc.defaultView=win;
+ const ancestor=(geometry,style,parentElement)=>({ownerDocument:doc,parentElement,style,clientLeft:0,clientTop:0,clientWidth:geometry.width,clientHeight:geometry.height,getBoundingClientRect:()=>geometry});
+ const html=ancestor(rect(root),{overflowX:'hidden',overflowY:'auto'},null);doc.scrollingElement=html;
+ const box=ancestor(rect(parent),styles,html);
+ const geometry=rect({left:20,top:20,right:180,bottom:68,width:160,height:48,...target});
+ const el=ancestor(geometry,{},box);el.scrollWidth=el.clientWidth;el.scrollHeight=el.clientHeight;el.contains=n=>n===el;doc.elementFromPoint=()=>el;
+ return{el,box,html,doc};
+}
+const accepted=el=>{const a=inspectShareTarget(el);return a.visible&&a.viewport!==false&&a.unclipped!==false&&a.hit&&a.fits&&a.width>=44&&a.height>=44};
+test('normal fully visible target accepted',()=>assert.equal(accepted(fixture().el),true));
+test('transparent or display-none ancestor cannot pass even with a center hit',()=>{for(const styles of [{opacity:'0'},{display:'none'},{visibility:'hidden'}])assert.equal(accepted(fixture({styles}).el),false)});
+test('8px ancestor clipping is rejected although center remains reachable',()=>assert.equal(accepted(fixture({parent:{top:28,bottom:852,height:824},styles:{overflowY:'hidden'}}).el),false));
+test('fixed target partially outside viewport is rejected despite a mocked center hit',()=>assert.equal(accepted(fixture({target:{top:-8,bottom:40,height:48}}).el),false));
+test('scrolling root uses viewport origin rather than scrolled document rect',()=>assert.equal(accepted(fixture({root:{top:-300,bottom:552,height:852},target:{top:780,bottom:828,height:48}}).el),true));
+test('non-root clipping uses client border origin',()=>{const f=fixture({parent:{top:20,bottom:100,height:80},styles:{overflowY:'auto'}});f.box.clientTop=9;assert.equal(accepted(f.el),false)});
+
+test('native language select has dark text on an explicit light surface',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const rule=html.match(/#languageSelect\s*\{([^}]+)\}/)?.[1]||'';
+ assert.match(rule,/background:\s*#fff\s*;/);assert.match(rule,/(?:^|;)\s*color:\s*#111\s*;/);
+ assert.doesNotMatch(rule,/appearance\s*:/,'Keep the native picker and arrow');
+});
+
+test('finish rows reserve translated rank and time widths while names wrap within remaining space',async()=>{
+ const {readFileSync}=await import('node:fs');const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const rule=selector=>html.match(new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\{([^}]+)\\}'))?.[1]||'';
+ assert.match(rule('.finish-rank'),/flex:\s*0 0 5\.5em\s*;/);assert.match(rule('.finish-rank'),/overflow-wrap:\s*anywhere\s*;/);
+ assert.match(rule('.finish-name'),/min-width:\s*0\s*;/);assert.match(rule('.finish-name'),/overflow-wrap:\s*anywhere\s*;/);
+});

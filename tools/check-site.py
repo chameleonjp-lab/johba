@@ -2,6 +2,7 @@
 """Validate the single-file release and optionally stage only its public file."""
 import argparse
 import json
+import struct
 from html.parser import HTMLParser
 from pathlib import Path
 import shutil
@@ -60,6 +61,10 @@ def main():
     page.feed(html)
     if page.local_assets:
         raise ValueError('Release manifest must be extended for local assets: ' + ', '.join(page.local_assets))
+    card = ROOT / 'assets' / 'social-card.png'
+    card_bytes = card.read_bytes()
+    if card_bytes[:8] != b'\x89PNG\r\n\x1a\n' or len(card_bytes) < 24 or struct.unpack('>II', card_bytes[16:24]) != (1200, 630):
+        raise ValueError('The fixed social card must be a 1200x630 PNG')
     checked = 0
     with tempfile.TemporaryDirectory() as temp:
         for i, (attrs, chunks) in enumerate(page.scripts):
@@ -84,8 +89,10 @@ def main():
             shutil.rmtree(output)
         output.mkdir()
         shutil.copy2(ROOT / 'index.html', output / 'index.html')
+        (output / 'assets').mkdir()
+        shutil.copy2(card, output / 'assets' / 'social-card.png')
         (output / '.nojekyll').touch()
-    print(f'Validated index.html: {checked} JavaScript blocks; single-file public release')
+    print(f'Validated index.html: {checked} JavaScript blocks; single-file runtime plus fixed social PNG')
 
 
 if __name__ == '__main__':
