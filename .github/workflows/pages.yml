@@ -3,7 +3,7 @@ name: Validate and deploy Pages
 on:
   pull_request:
   push:
-    branches: ["claude/eager-wozniak-1oe5zz", "codex/share-thumbnail-20261102"]
+    branches: ["claude/eager-wozniak-1oe5zz"]
 
 permissions:
   contents: read
