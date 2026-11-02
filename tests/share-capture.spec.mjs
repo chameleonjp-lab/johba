@@ -34,5 +34,16 @@ test('anonymous real race renderer capture without external communication', asyn
   const bytes=Buffer.from(frame.png.split(',')[1],'base64');expect(bytes.length).toBeGreaterThan(10000);
   mkdirSync('test-results/share-capture',{recursive:true});writeFileSync('test-results/share-capture/johba-real-race.png',bytes);
   writeFileSync('test-results/share-capture/receipt.json',JSON.stringify({source:'actual race renderer; no renderer/score/name modifications',viewport:{width:1200,height:630},state:frame.state,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),externalRequests:unexpected,pageErrors:errors},null,2));
+  // Presentation-only HTML layers the unchanged renderer pixels with a truthful title.
+  await page.setContent(`<html lang="ja"><meta charset="utf-8"><style>
+    *{box-sizing:border-box}html,body{margin:0;width:1200px;height:630px;overflow:hidden;background:#082b20}
+    img{position:absolute;inset:0;width:1200px;height:630px;object-fit:contain}
+    .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,25,21,.92),rgba(3,25,21,.58) 31%,transparent 63%)}
+    .title{position:absolute;left:54px;top:54px;color:#fff;font-family:Arial,'Noto Sans CJK JP',sans-serif}
+    .eyebrow{font-size:24px;letter-spacing:9px;color:#b8ebd5;font-weight:700}h1{font-size:92px;line-height:1.2;margin:18px 0 20px;font-weight:900;letter-spacing:3px}
+    .subtitle{font-size:28px;font-weight:700;letter-spacing:2px;margin:0}.caption{position:absolute;left:58px;bottom:48px;color:#fff;font:700 24px Arial,'Noto Sans CJK JP',sans-serif}
+    </style><img alt="実際のジョーバの競馬場と馬" src="${frame.png}"><div class="shade"></div><div class="title"><div class="eyebrow">JOHBA</div><h1>ジョーバ</h1><p class="subtitle">騎手視点3D競馬</p></div><div class="caption">12頭のレースで、1着を目指せ。</div></html>`);
+  await page.locator('img').evaluate(image=>image.decode());await page.evaluate(()=>document.fonts.ready);
+  await page.screenshot({path:'test-results/share-capture/johba-social-card.png'});
   expect(unexpected).toEqual([]);expect(errors).toEqual([]);await context.close();
 });
