@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {readFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {inspectShareTarget} from './helpers/share-visibility.mjs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const origin='https://johba.test', publicURL='https://chameleonjp.codeberg.page/johba/';
@@ -32,6 +32,13 @@ async function visibleX(page,id){
  const g=await b.evaluate(inspectShareTarget);
  expect(g.width).toBeGreaterThanOrEqual(44);expect(g.height).toBeGreaterThanOrEqual(44);expect(g.visible).toBe(true);expect(g.viewport).toBe(true);expect(g.unclipped).toBe(true);expect(g.hit).toBe(true);expect(g.fits).toBe(true);return b;
 }
+async function finishGeometry(page){
+ return page.locator('.finish-row').evaluateAll(rows=>rows.map(row=>{
+  const children=[...row.children],box=row.getBoundingClientRect(),parts=children.map(el=>{const rect=el.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(el);return {text:el.textContent.trim(),left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,textRects:[...range.getClientRects()].map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom})),clientWidth:el.clientWidth,scrollWidth:el.scrollWidth};});
+  const defects=[];parts.forEach((p,i)=>{if(p.left<box.left-.5||p.right>box.right+.5)defects.push('column outside row '+i);if(p.scrollWidth>p.clientWidth+1)defects.push('text overflow '+i);if(i<parts.length-1&&p.right>parts[i+1].left+.5)defects.push('columns overlap '+i);for(const t of p.textRects){if(t.left<p.left-.5||t.right>p.right+.5||t.top<p.top-.5||t.bottom>p.bottom+.5)defects.push('text outside cell '+i);if(i<parts.length-1&&t.right>parts[i+1].left+.5)defects.push('text overlaps next cell '+i);}});
+  return{parts,defects};
+ }));
+}
 for(const lang of langs)for(const orientation of ['portrait',...(['ja','en','de'].includes(lang)?['landscape']:[])])test(`${lang} ${orientation}: home/result X text and touch target`,async({browser},testInfo)=>{
  const viewport=orientation==='portrait'?{width:393,height:852}:{width:852,height:393};const {context,page,bad,errors}=await setup(browser,lang,viewport);
  const language=page.locator('#languageSelect');await expect(language).toHaveValue(lang);await expect(language).toHaveCSS('color','rgb(17, 17, 17)');await expect(language).toHaveCSS('background-color','rgb(255, 255, 255)');
@@ -40,6 +47,17 @@ for(const lang of langs)for(const orientation of ['portrait',...(['ja','en','de'
  let finalResult;
  for(const screen of ['home','result']){
   if(screen==='result'){await page.locator('#btnStart').click();finalResult=await page.evaluate(()=>shareVisible.finish());await expect(page.locator('#screenResult')).toBeVisible();}
+  if(screen==='result'){
+   if(['en','de'].includes(lang)&&orientation==='portrait'){
+    // Mutation regression: recreate the fixed-24px legacy column in this isolated mock page.
+    const old=await page.addStyleTag({content:'.finish-rank{width:24px!important;min-width:auto!important;flex:0 1 auto!important;overflow-wrap:normal!important}.finish-name{flex:0 1 auto!important;min-width:auto!important;overflow-wrap:normal!important}'});
+    const legacy=await finishGeometry(page);mkdirSync('test-results/share-visible',{recursive:true});writeFileSync(`test-results/share-visible/${testInfo.project.name}-${lang}-${orientation}-legacy-geometry.json`,JSON.stringify(legacy,null,2));expect(legacy.some(r=>r.defects.length>0)).toBe(true);await old.evaluate(el=>el.remove());
+   }
+   const geometry=await finishGeometry(page);mkdirSync('test-results/share-visible',{recursive:true});writeFileSync(`test-results/share-visible/${testInfo.project.name}-${lang}-${orientation}-finish-geometry.json`,JSON.stringify(geometry,null,2));expect(geometry).toHaveLength(12);expect(geometry.flatMap(r=>r.defects)).toEqual([]);
+   for(let rank=1;rank<=12;rank++)expect(geometry[rank-1].parts[0].text).toBe(await page.evaluate(rank=>JohbaI18n.t('result.place',{rank}),rank));
+   mkdirSync('test-results/share-visible',{recursive:true});await testInfo.attach('finish-geometry',{body:JSON.stringify({lang,orientation,rows:geometry},null,2),contentType:'application/json'});
+   if(['ja','en','de'].includes(lang))await page.locator('#finishOrderList').screenshot({path:`test-results/share-visible/${testInfo.project.name}-${lang}-${orientation}-finish-order.png`});
+  }
   const id=screen==='home'?'#btnShare':'#btnShare2', b=await visibleX(page,id);await expect(b).toHaveText(await page.evaluate(()=>JohbaI18n.t('share.button')));
   const expected=await page.evaluate(screen=>screen==='home'?shareVisible.homeText():document.querySelector('#btnShare2').dataset.shareText,screen);
   if(screen==='result'){expect(Number.isFinite(finalResult.score)).toBe(true);expect(expected).toBe(await page.evaluate(values=>JohbaI18n.t('share.result',values),{...finalResult,url:publicURL}));}

@@ -26,3 +26,10 @@ test('native language select has dark text on an explicit light surface',async()
  assert.match(rule,/background:\s*#fff\s*;/);assert.match(rule,/(?:^|;)\s*color:\s*#111\s*;/);
  assert.doesNotMatch(rule,/appearance\s*:/,'Keep the native picker and arrow');
 });
+
+test('finish rows reserve translated rank and time widths while names wrap within remaining space',async()=>{
+ const {readFileSync}=await import('node:fs');const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const rule=selector=>html.match(new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\{([^}]+)\\}'))?.[1]||'';
+ assert.match(rule('.finish-rank'),/flex:\s*0 0 5\.5em\s*;/);assert.match(rule('.finish-rank'),/overflow-wrap:\s*anywhere\s*;/);
+ assert.match(rule('.finish-name'),/min-width:\s*0\s*;/);assert.match(rule('.finish-name'),/overflow-wrap:\s*anywhere\s*;/);
+});

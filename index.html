@@ -325,8 +325,10 @@
       padding: 6px 8px; border-radius: 8px; margin-bottom: 4px;
     }
     .finish-row.player-row { background: rgba(68,170,255,0.18); }
-    .finish-rank { font-size: 13px; font-weight: 700; width: 24px; color: #aaa; }
-    .finish-name { font-size: 14px; font-weight: 700; color: #eee; }
+    .finish-rank { font-size: 13px; font-weight: 700; flex: 0 0 5.5em; overflow-wrap: anywhere; color: #aaa; }
+    .finish-name { font-size: 14px; font-weight: 700; flex: 1; min-width: 0; overflow-wrap: anywhere; color: #eee; }
+    .finish-row > span:nth-child(3) { flex: 0 0 22px; }
+    .finish-row > span:last-child { flex-shrink: 0; white-space: nowrap; }
     #resultBtns { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 300px; }
     #resultBtns .btn-primary, #resultBtns .btn-secondary, #resultBtns .btn-tertiary {
       width: 100%;
