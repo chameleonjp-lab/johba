@@ -123,3 +123,10 @@ test('independent: restored contradictory anonymous receipt cannot become public
 test('temporary storage read denial keeps generated UUID for later safe save',async()=>{
  const s=setup();const read=s.ctx.localStorage.getItem;s.ctx.localStorage.getItem=()=>{throw Error('blocked read');};const p=s.ctx.createRankingPlay('A');s.ctx.finalizeRankingPlay(p,21);assert.ok(p.id);s.ctx.localStorage.getItem=read;await s.ctx.sendRankingPlay(p);assert.equal(p.status,'sent');
 });
+
+
+test('out-of-int4 acknowledgement stays failed and retry retains frozen identity',async()=>{
+ for(const patch of [{result_first_score:2147483648},{result_first_score:-2147483649},{result_best_score:2147483648},{result_best_score:-2147483649},{result_play_count:2147483648}]){
+  let invalid=true;const calls=[];const {ctx}=setup(async(fn,p)=>{calls.push(p);return[{...receipt(p.p_display_name,p.p_score)[0],...(invalid?patch:{result_first_score:-1})}];});const p=ctx.createRankingPlay('A');ctx.finalizeRankingPlay(p,123);await ctx.sendRankingPlay(p);assert.equal(p.status,'failed',JSON.stringify(patch));invalid=false;await ctx.sendRankingPlay(p);assert.equal(p.status,'sent');assert.deepEqual(calls[0],calls[1]);
+ }
+});

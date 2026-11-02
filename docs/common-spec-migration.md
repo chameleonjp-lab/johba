@@ -188,3 +188,7 @@ AudioContextが`interrupted`になった場合も`suspended`と同様に、音�
 現時点のローカル unit/静的検査は成功、ローカルブラウザは実行ファイル不足で未実行。固定 head の CI 結果は PR 本文に追記します。画面幅の模擬・ソフトウェア描画は iPhone 実機/実聴取/翻訳の母語者確認とは異なります。参加者識別・厳密30人・DB適用・Pages Source・GitHub正式URL/保存origin移行の残件は解消していません。
 
 独立レビュー後の追加補修：実DBの `get_best_score_ranking` 戻り列は `best_score` であり、旧 `score` 参照では点数が `?` になっていました。列を現契約に合わせ、同順位を維持します。UUID衝突時は旧控えを隠さず新送信を止め、不整合な匿名受領書は公開せず原文を残します。ACK後だけ保存に失敗した結果は、再試行で通信せず送信済み控えの保存だけを再試行します。閉じた音声contextの再構築、途中の音源生成失敗、遅延interrupted通知、stop失敗でも古い音源を後片付けします。現時点で56 unit tests/5構文検査成功、browser 46件を定義（実行成功はCI結果で別記）。レースCONFIG/SIM-COREのbytesは変更していません。
+
+
+## 2026-11-02 09:50 JST acknowledgement boundary follow-up
+Baseline PR3 `292e1ec5d9c44b9fb8b5fa22e77aa260f6dae5fb`. Real public receipt submission accepted integer values beyond PostgreSQL int4 and incorrectly marked sent. The validator now rejects these out-of-contract values, retaining the original result and retry payload. Existing owner/descending-best checks remain; legal signed first-score history is not rejected. Regression RED→GREEN, all 57 local tests, site validation/staging and the existing 10-race simulation pass. Independent review/current-head Chromium-WebKit CI are pending; iPhone/identity/production conditions remain separate. No gameplay, DB or production changes.

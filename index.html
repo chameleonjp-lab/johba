@@ -4480,7 +4480,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
         const integers = ['result_first_score','result_best_score','result_play_count'];
         const flags = ['accepted','is_first_play','is_new_best','was_duplicate'];
         if (!row || flags.some(k => typeof row[k] !== 'boolean') ||
-            integers.some(k => !Number.isSafeInteger(row[k])) || row.result_play_count < 1 ||
+            integers.some(k => !Number.isSafeInteger(row[k]) || row[k] < -2147483648 || row[k] > 2147483647) || row.result_play_count < 1 ||
             row.result_normalized_name !== play.name || row.result_display_name !== play.name ||
             row.result_best_score < play.score) throw new Error('Unconfirmed receipt');
         if (!row.accepted) { play.status = 'rejected'; return; }
