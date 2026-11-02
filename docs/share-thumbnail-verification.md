@@ -8,7 +8,7 @@
 - ホーム/結果に通常コピー専用ボタンは元から無い。`commonShareCopy` はXを開けない時だけのコピーdialogであり、残す。
 
 ## 検査
-- `npm test`: 既存57＋画像共有3＋可視geometry6。画像共有は未実装時3失敗→実装後3成功、可視geometryは旧判定で部分clip等3失敗→修正後6成功、全66成功。
+- `npm test`: 既存57＋画像共有3＋可視geometry等7。画像共有は未実装時3失敗→実装後3成功、可視geometryは旧判定で部分clip等3失敗→修正後6成功、全67成功。
 - 新テストは15言語×ホーム/結果の正確な2tag、X加重280以内、固定PNG寸法、公開ステージへの全byte一致を検査。
 - `tests/share-visible.spec.mjs`: 15言語縦＋ja/en/de横、Chromium/WebKitで36ケース。各画面の黒白X表示、44px、祖先非表示/透明でないこと、文字切れ、viewport内の全rectとoverflow祖先による部分clip、中心の押下対象、touch一回→intent一回、実本文一致、今回の点数保持を検査。代表24画面をartifactへ保存し実見する。
 - 新capture/可視テストは全外部通信をroute.fulfill/abortで封鎖し、SW/WSも遮断。既Threeの固定npm実体のみローカルから返す。スコア送信はしない。
@@ -22,3 +22,5 @@
 4. 戻す場合はこのPR差分をrevertし、最後に正常な公開版を既存手順で扱う。スコア/名前/音/言語の保存を消去しない。
 
 検証workflowは既公開refだけをPages upload/deploy対象として明示し、非公開refの検証を本番concurrencyから分離する。検証用一時push対象は最終Draft前に復元する。公開設定や権限は変更しない。
+
+実WebKit画像で言語選択欄が白地白文字になる既存不具合を確認したため、この欄だけ明示的な白背景/濃色文字へ統一する。native選択UI・矢印・言語値・保存/イベントは維持。15言語でcomputed色/実値と代表言語欄PNGを確認する。

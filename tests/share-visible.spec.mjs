@@ -34,6 +34,9 @@ async function visibleX(page,id){
 }
 for(const lang of langs)for(const orientation of ['portrait',...(['ja','en','de'].includes(lang)?['landscape']:[])])test(`${lang} ${orientation}: home/result X text and touch target`,async({browser},testInfo)=>{
  const viewport=orientation==='portrait'?{width:393,height:852}:{width:852,height:393};const {context,page,bad,errors}=await setup(browser,lang,viewport);
+ const language=page.locator('#languageSelect');await expect(language).toHaveValue(lang);await expect(language).toHaveCSS('color','rgb(17, 17, 17)');await expect(language).toHaveCSS('background-color','rgb(255, 255, 255)');
+ if(['ja','en','de'].includes(lang)){mkdirSync('test-results/share-visible',{recursive:true});await language.screenshot({path:`test-results/share-visible/${testInfo.project.name}-${lang}-${orientation}-language.png`});}
+
  let finalResult;
  for(const screen of ['home','result']){
   if(screen==='result'){await page.locator('#btnStart').click();finalResult=await page.evaluate(()=>shareVisible.finish());await expect(page.locator('#screenResult')).toBeVisible();}

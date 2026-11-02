@@ -18,3 +18,11 @@ test('8px ancestor clipping is rejected although center remains reachable',()=>a
 test('fixed target partially outside viewport is rejected despite a mocked center hit',()=>assert.equal(accepted(fixture({target:{top:-8,bottom:40,height:48}}).el),false));
 test('scrolling root uses viewport origin rather than scrolled document rect',()=>assert.equal(accepted(fixture({root:{top:-300,bottom:552,height:852},target:{top:780,bottom:828,height:48}}).el),true));
 test('non-root clipping uses client border origin',()=>{const f=fixture({parent:{top:20,bottom:100,height:80},styles:{overflowY:'auto'}});f.box.clientTop=9;assert.equal(accepted(f.el),false)});
+
+test('native language select has dark text on an explicit light surface',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const rule=html.match(/#languageSelect\s*\{([^}]+)\}/)?.[1]||'';
+ assert.match(rule,/background:\s*#fff\s*;/);assert.match(rule,/(?:^|;)\s*color:\s*#111\s*;/);
+ assert.doesNotMatch(rule,/appearance\s*:/,'Keep the native picker and arrow');
+});
