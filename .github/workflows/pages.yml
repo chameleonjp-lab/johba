@@ -26,6 +26,7 @@ jobs:
           python-version: '3.12'
       - run: python3 tools/check-site.py
       - run: node tools/share.test.mjs
+      - run: node --test tools/social-card.test.mjs tools/share-visibility.test.mjs
       - run: node tools/audio.test.mjs
       - run: node tools/participation.test.mjs
       - run: node tools/ranking.test.mjs
@@ -40,7 +41,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: johba-share-capture
-          path: test-results/share-capture/
+          path: |
+            test-results/share-capture/
+            test-results/share-visible/
           if-no-files-found: ignore
       - name: Stage the validated public file
         run: python3 tools/check-site.py --out _site
