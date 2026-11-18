@@ -4498,7 +4498,7 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
         if (!row || flags.some(k => typeof row[k] !== 'boolean') ||
             integers.some(k => !Number.isSafeInteger(row[k]) || row[k] < -2147483648 || row[k] > 2147483647) || row.result_play_count < 1 ||
             row.result_normalized_name !== play.name || row.result_display_name !== play.name ||
-            row.result_best_score < play.score) throw new Error('Unconfirmed receipt');
+            row.result_best_score < play.score || row.result_best_score < row.result_first_score) throw new Error('Unconfirmed receipt');
         if (!row.accepted) { play.status = 'rejected'; return; }
         play.status = 'sent';
       } catch (error) {
@@ -4824,4 +4824,5 @@ button.common-x-share { background:#000 !important; color:#fff !important; borde
   </script>
 </body>
 </html>
+
 

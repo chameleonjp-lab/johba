@@ -130,3 +130,20 @@ test('out-of-int4 acknowledgement stays failed and retry retains frozen identity
   let invalid=true;const calls=[];const {ctx}=setup(async(fn,p)=>{calls.push(p);return[{...receipt(p.p_display_name,p.p_score)[0],...(invalid?patch:{result_first_score:-1})}];});const p=ctx.createRankingPlay('A');ctx.finalizeRankingPlay(p,123);await ctx.sendRankingPlay(p);assert.equal(p.status,'failed',JSON.stringify(patch));invalid=false;await ctx.sendRankingPlay(p);assert.equal(p.status,'sent');assert.deepEqual(calls[0],calls[1]);
  }
 });
+
+
+test('descending receipt cannot confirm best below first; reload retries the same immutable payload',async()=>{
+ const calls=[];let invalid=true;
+ const rpc=async(fn,p)=>{calls.push([fn,JSON.stringify(p)]);return [{...receipt(p.p_display_name,p.p_score)[0],result_first_score:200,result_best_score:invalid?150:200,result_play_count:2,is_first_play:false,is_new_best:false,was_duplicate:!invalid}];};
+ const s=setup(rpc);const p=s.ctx.createRankingPlay('騎手');s.ctx.finalizeRankingPlay(p,123);await s.ctx.sendRankingPlay(p);
+ assert.equal(p.status,'failed');assert.equal(p.score,123);
+ const disk=JSON.parse(s.store.get('johba_score_receipt_v1:'+p.id));assert.equal(disk.status,'failed');assert.equal(disk.score,123);
+ invalid=false;const restored=setup(rpc,s.store).ctx;const q=restored.restoreRankingPlay(p.id);await restored.sendRankingPlay(q);
+ assert.equal(q.status,'sent');assert.equal(q.id,p.id);assert.equal(q.score,123);assert.equal(q.name,'騎手');assert.deepEqual(calls[0],calls[1]);assert.equal(calls.length,2);
+});
+test('valid equal/zero/negative historical first scores remain accepted',async()=>{
+ for(const first of [200,123,0,-1,-2147483648]){
+  const {ctx}=setup(async(_,p)=>[{...receipt(p.p_display_name,p.p_score)[0],result_first_score:first,result_best_score:200,result_play_count:2,is_first_play:false,is_new_best:false}]);
+  const p=ctx.createRankingPlay('A');ctx.finalizeRankingPlay(p,123);await ctx.sendRankingPlay(p);assert.equal(p.status,'sent',String(first));
+ }
+});
